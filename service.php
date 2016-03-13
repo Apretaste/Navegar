@@ -13,8 +13,6 @@ class Navegar extends Service
 	public function _main(Request $request)
 	{
 		// change blank query to default http://guije.com
-
-
 		$url="" ;
 		$isNoimage = false;
 		$url = "www.guije.com" ;
@@ -38,7 +36,7 @@ class Navegar extends Service
 		$url_dec=urldecode($url);
         
 	    // find the right query in navegar
-       
+
         $correctedQuery = $this->checkurl($url);
 			
 		if(empty($correctedQuery))
@@ -77,9 +75,7 @@ class Navegar extends Service
 	 */
 	
 	private function checkurl($query){
-
-
-	// need to make it work for http and https
+		// need to make it work for http and https
 		$encodedQuery = "http://$query/";
 		// get the results part as an array 
 		$page = file_get_contents($encodedQuery);
@@ -93,14 +89,10 @@ class Navegar extends Service
 		} 
 	}
 
-    
-
-
 	/**
 	 * Get an article from navegar
 	 * 
 	 */
-
 	private function get($query,$noimage) {
 		$utils = new Utils();
 
@@ -167,28 +159,28 @@ class Navegar extends Service
 		$page = str_ireplace("href=\"http://", 'href="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR ', $page);
 		$page = str_ireplace("href=\"/", 'href="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR '.$query.'', $page);
 		
-        
-				// compress the returning code
-				$page = preg_replace('/\s+/S', " ", $page);
+		// compress the returning code
+		$page = preg_replace('/\s+/S', " ", $page);
 
+	    // if the result is too big, hide images and shorten text
+		$limit = 1024 * 450;
+		$isLarge = false;
+		$images = array(); // @TODO fill array
+		$title = ""; // @TODO save the title
+		if (strlen($page) > $limit)
+		{
+			$isLarge = true;
+			$images = array(); 
+			$page = substr($page, 0, $limit);
+		}
 
-			    // if the result is too big, hide images and shorten text
-				$limit = 1024 * 450;
-				$isLarge = false;
-				if (strlen($page) > $limit)
-				{
-					$isLarge = true;
-					$images = array();
-					$page = substr($page, 0, $limit);
-				}
-
-				// save content into pages that will go to the view
-				return array(
-					"title" => $title,
-					"body" => $page,
-					"images" => $images,
-					"isLarge" => $isLarge
-				);
+		// save content into pages that will go to the view
+		return array(
+			"title" => $title,
+			"body" => $page,
+			"images" => $images,
+			"isLarge" => $isLarge
+		);
 	}
 
 
