@@ -8,6 +8,7 @@ class Navegar extends Service
 	 * @param Request
 	 * @return Response
 	 * */
+	
 
 	public function _main(Request $request)
 	{
@@ -15,8 +16,8 @@ class Navegar extends Service
 
 
 		$url="" ;
-		$ifimage = true ;
-		$url = urlencode("www.guije.com") ;
+		$isNoimage = false;
+		$url = "www.guije.com" ;
 
 		if(!empty($request->query)) {
             $url = $request->query;
@@ -29,7 +30,7 @@ class Navegar extends Service
 		}
 
 		if (preg_match('/--noimage/',$url)) {
-            	$ifimage = false ;
+            	$isNoimage = true;
             	$url = str_ireplace(" --noimage","",$url) ; 
             }
 
@@ -49,7 +50,7 @@ class Navegar extends Service
 		}
 		
 		// get the HTML code for the page
-		$page = $this->get($correctedQuery);
+		$page = $this->get($correctedQuery,$isNoimage);
 
 		// get the home image
 		$imageName = empty($page['images']) ? false : basename($page['images'][0]);
@@ -100,7 +101,7 @@ class Navegar extends Service
 	 * 
 	 */
 
-	private function get($query) {
+	private function get($query,$noimage) {
 		$utils = new Utils();
 
 		// get path to the www folder
@@ -138,11 +139,13 @@ class Navegar extends Service
         // remove a lot of tags 
         $page = str_ireplace(array(''),"", $page) ;
 
-        if ($ifimage==false){
+
+        if ($noimage == false)
+        {
+        	//try to get a copy of image and chnage reference inside of the <img>
+        } else {
         	//remove images tabs.
             $page = preg_replace("/<img[^>]+\>/i", " ", $page); 
-        } else {
-        	//try to get a copy of image and chnage reference inside of the <img>
         }
 
 		// cleanning the text to look better in the email
