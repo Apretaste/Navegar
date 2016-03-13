@@ -7,6 +7,6 @@ Para navegar el Internet, escriba un nuevo email a {APRETASTE_EMAIL} y en el asu
 			Para: {APRETASTE_EMAIL}
 			Asunto: NAVEGAR http://www.guije.com/
 			
-			Debera recibir un email en respuesta con sitio  simplificado.
-			Si obmite sitio after NAVEGAR , usaria defult sitio www.guije.com
-			soporta --noimage opcion para eleminar todas las imagenes. 
+Debera recibir un email en respuesta con sitio  simplificado.
+Si obmite sitio after NAVEGAR , usaria default sitio www.guije.com
+soporta --noimage opcion para eleminar todas las imagenes. 
