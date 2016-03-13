@@ -65,7 +65,7 @@ class Navegar extends Service
 
 		// send the response to the template 
 		$response = new Response();
-		$response->setResponseSubject("Navegar: {$page['title']}       {$url_dec}");
+		$response->setResponseSubject("Navegar: {$page['title']}");
 		$response->createFromTemplate("navegar.tpl", $responseContent, $page['images']);
 		return $response;
 		
@@ -136,13 +136,94 @@ class Navegar extends Service
 		$page = str_ireplace('>?</span>', '></span>', $page);
 		$page = trim($page);
 		
-        // remove a lot of tags 
+        // remove a lot of tags   this only for future change
         $page = str_ireplace(array(''),"", $page) ;
 
+        if ( ! empty($page))
+			{
+				// Build our DOMDocument, and load our HTML
+				$doc = new DOMDocument();
+				@$doc->loadHTML($page);
+
+				// New-up an instance of our DOMXPath class
+				$xpath = new DOMXPath($doc);
+
+				// Find all elements whose class attribute has test2
+				$elements = $xpath->query("//*[contains(@class,'thumb')]");
+
+				// Cycle over each, remove attribute 'class'
+				foreach ($elements as $element)
+				{
+					// Empty out the class attribute value
+					$element->parentNode->removeChild($element);
+				}
+
+				// make the suggestion smaller and separate it from the table
+				$nodes = $xpath->query("//div[contains(@class, 'rellink')]");
+				if ($nodes->length > 0)
+				{
+					$nodes->item(0)->setAttribute("style", "font-size:small;");
+					$nodes->item(0)->appendChild($doc->createElement("br"));
+					$nodes->item(0)->appendChild($doc->createElement("br"));
+				}
+
+				// make the table centered
+				$nodes = $xpath->query("//table[contains(@class, 'infobox')]");
+				if ($nodes->length > 0)
+				{
+					$nodes->item(0)->setAttribute("border", "1");
+					$nodes->item(0)->setAttribute("width", "100%");
+					$nodes->item(0)->setAttribute('style', 'width:100%;');
+				}
+
+				// make the quotes takes the whole screen 
+				$nodes = $xpath->query("//table[contains(@class, 'wikitable')]");
+				for($i=0; $i<$nodes->length; $i++)
+				{
+					$nodes->item($i)->setAttribute("width", "100%");
+					$nodes->item($i)->setAttribute("style", "table-layout:fixed; width:100%;");
+				}
+
+				// remove all the noresize resources that makes the page wider
+				$nodes = $xpath->query("//*[contains(@class, 'noresize')]");
+				for($i=0; $i<$nodes->length; $i++) $nodes->item($i)->parentNode->removeChild($nodes->item($i));
+
+				// Load images
+				$imagestags = $doc->getElementsByTagName("img");
+
+				$images = array();
+				if (($imagestags->length > 0)&&($noimage == false))
+				{
+					foreach ($imagestags as $imgtag)
+					{
+						// get the full path to the image 
+						$imgsrc = $imgtag->getAttribute('src');
+						if (substr($imgsrc, 0, 2) == '//') $imgsrc = 'https:' . $imgsrc;
+
+
+						// save image as a png file
+						$filePath = "$wwwroot/temp/" . $utils->generateRandomHash() . ".png";
+						$content = file_get_contents($imgsrc);
+						imagepng(imagecreatefromstring($content), $filePath);
+
+						// optimize the png image
+						$utils->optimizeImage($filePath);
+
+						// save the image in the array for the template
+						$images[] = $filePath;
+
+						//change the src at the document for the images
+						$imgtag->setAttribute('src', $filePath);
+
+					}
+				}
+
+				// Output the HTML of our container
+				$page = $doc->saveHTML();
 
         if ($noimage == false)
         {
-        	//try to get a copy of image and chnage reference inside of the <img>
+        	//chnage source inside of the <img>
         } else {
         	//remove images tabs.
             $page = preg_replace("/<img[^>]+\>/i", " ", $page); 
@@ -161,7 +242,7 @@ class Navegar extends Service
 		// convert the links to emails
 		$apretasteValidEmailAddress = $utils->getValidEmailAddress();
 		# for some sites that don't have / at the begin of path.
-		$page = preg_replace('#[href/HREF]=\"(\w+)\/#', 'F="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR '.$query.'\2', $page);
+		$page = preg_replace('#[href/HREF]=\"(\w+)\/#', 'F="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR '.$query.'\1/\2', $page);
 		$page = str_ireplace("href=\"//", 'href="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR ', $page);
 		$page = str_ireplace("href=\"https://", 'href="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR ', $page);
 		$page = str_ireplace("href=\"http://", 'href="mailto:'.$apretasteValidEmailAddress.'?subject=NAVEGAR ', $page);
@@ -175,6 +256,7 @@ class Navegar extends Service
 			    // if the result is too big, hide images and shorten text
 				$limit = 1024 * 450;
 				$isLarge = false;
+				$title = $query ;
 				if (strlen($page) > $limit)
 				{
 					$isLarge = true;
@@ -189,6 +271,8 @@ class Navegar extends Service
 					"images" => $images,
 					"isLarge" => $isLarge
 				);
+		}
+		return false;		
 	}
 
 
