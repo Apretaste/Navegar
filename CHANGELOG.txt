@@ -1,0 +1,3 @@
+2016-03-15
+- added alternative api for ftp connections: http://www.phpclasses.org/package/3174-PHP-Client-to-access-FTP-servers-in-pure-PHP-code.html
+  thanks to Erwin Kooi

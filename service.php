@@ -946,6 +946,7 @@ class Navegar extends Service
         if (empty($path)) $path = "./";
         
         $ftp = ftp_connect($host, $port);
+        die('test');
         $login_result = ftp_login($ftp, $user, $pass);
         
         if ($login_result) {
