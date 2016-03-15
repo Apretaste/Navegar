@@ -946,14 +946,13 @@ class Navegar extends Service
         if (empty($path)) $path = "./";
         
         $ftp = ftp_connect($host, $port);
-        var_dump($ftp);
- 
+        
         $login_result = ftp_login($ftp, $user, $pass);
-        var_dump($login_result);
-        die('test');
+       
         if ($login_result) {
             $r = @ftp_chdir($ftp, $path);
-            
+            var_dump($r);
+            die('test');
             if ($r === false) {
                 $size = ftp_size($ftp, $path);
                 
