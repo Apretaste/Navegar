@@ -951,11 +951,11 @@ class Navegar extends Service
        
         if ($login_result) {
             $r = @ftp_chdir($ftp, $path);
-            var_dump($r);
-            die('test');
+            
             if ($r === false) {
                 $size = ftp_size($ftp, $path);
-                
+                var_dump($size);
+          
                 if ($size >= 0) {
                     if ($size <= $this->config['max_attachment_size']) {
                         $local_file = $this->getTempDir() . "/files/" . md5($url);
@@ -1004,6 +1004,8 @@ class Navegar extends Service
             } else {
                 
                 $contents = ftp_nlist($ftp, ".");
+                var_dump($contents);
+                die('test');
                 foreach ($contents as $k => $v) {
                     $contents[$k] = str_replace("./", "", $v);
                 }
