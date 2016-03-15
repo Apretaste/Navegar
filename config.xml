@@ -1,21 +1,55 @@
 <service>
 	<serviceName>navegar</serviceName>
-	<serviceDescription>Para navegar sitios de Internet </serviceDescription>
-	<creatorEmail>angelrr7702@gmail.com</creatorEmail>
-	<serviceCategory>ocio</serviceCategory>
+	<serviceDescription><![CDATA[Buscar y navegar en Internet mediante el email]]></serviceDescription>
+	<creatorEmail>kumarajiva2015@gmail.com</creatorEmail>
+	<serviceCategory>comunicaciones</serviceCategory>
 	<serviceUsage>
 		<![CDATA[
-			Para navegar el Internet, escriba un nuevo email a {APRETASTE_EMAIL} y en el asunto ponga la palabra NAVEGAR y el sitio de internet.
+			Este servicio le permitirá buscar y visitar direcciones en Internet mediante el email, dígase, 
+			sitios webs, descargar archivos pequeños, ver canales de noticias (RSS, Atom), acceder a 
+			servidores de archivo FTP, ver imágenes, entre otros. Los enlaces a otras direcciones en 
+			Internet podrá seguirlos haciendo clic en ellos cuando se le muestren y enviando los 
+			correos preparados con ese fin.
 
-			Por ejemplo:
-			Para: {APRETASTE_EMAIL}
-			Asunto: NAVEGAR http://www.guije.com/
+			Las imágenes de los sitios webs se le mostrarán como enlaces para obtenerlas en un correo 
+			aparte. Esas imágenes serán reducidas para que le puedan ser entregadas con facilidad.
+			
+			Los demás tipos de archivos que solicite le serán entregados como adjuntos, siempre y 
+			cuando no excedan los 400 kilobytes después de comprimirlos en formato ZIP.
+			
+			Podrás interactuar con algunos formularios en la web y posiblemente mantener sesiones
+			activas en sitios en los cuales debes registrarte para poder visitarlos. En esta funcionalidad 
+			estamos trabajando para mejorarla.
+			
+			Cómo navegar?
+			
+			Para utilizar este servicio debe enviar un correo a Apretaste y en el asunto escribir 
+			NAVEGAR seguida de dos posibles datos:
+			
+			    una dirección en Internet, dígase un sitio web, canal de noticias, servidor de archivos, 
+			    imagen u otro archivo, por ejemplo:
+			        Para: apretaste@gmail.com
+			        Asunto: NAVEGAR http://revolico.com/computadoras
+			
+			    Apretaste accederá a ese sitio por usted y se lo traerá a su email para que pueda navegar 
+			    en él.
+			     
+			    una frase para buscar en Internet, por ejemplo:
+			        Para: apretaste@gmail.com
+			        Asunto: NAVEGAR cuba
+			
+			    Apretaste buscará en la web los sitios que hablen de "cuba".
+		
+		Los subservicios
 
-			Debera recibir un email en respuesta con sitio  simplificado.
-			Si obmite sitio after NAVEGAR , usaria defult sitio www.guije.com
-			soporta --noimage opcion para eleminar todas las imagenes. 
-
-
+		Actualmente este servicio contiene 2 subservicios:
+		
+		NAVEGAR MOVIL: Agregando la palabra MOVIL al principio podras navegar en internet identificándote 
+		como un dispositivo móvil. Esto es útil para obtener páginas en formato reducido, típico en estos 
+		dispositivos.
+		
+		NAVEGAR NOTICIAS: Agregando la palabra NOTICIAS seguida de una frase de búsqueda al principio 
+		podrás buscar noticias en internet.
 		]]>
 	</serviceUsage>
 </service>
