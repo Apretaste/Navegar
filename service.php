@@ -41,6 +41,8 @@ class Navegar extends Service
         
         // Load libs
         require_once "{$this->pathToService}/lib/Emogrifier.php";
+        require_once "{$this->pathToService}/lib/php_ftp/ftp.class.php";
+        require_once "{$this->pathToService}/lib/php_ftp/ftp.api.php";
         
         $request->query = trim($request->query);
         
