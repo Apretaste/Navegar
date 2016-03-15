@@ -1003,7 +1003,8 @@ class Navegar extends Service
             } else {
                 
                 $contents = ftp_nlist($ftp, ".");
-                
+                var_dump($contents);
+                die('test');
                 foreach ($contents as $k => $v) {
                     $contents[$k] = str_replace("./", "", $v);
                 }

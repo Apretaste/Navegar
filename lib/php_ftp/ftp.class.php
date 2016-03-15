@@ -289,6 +289,8 @@ class FTP
     function nlist ($remote_filespec = "")
     { // Returns a list of files in the
                                           // given directory
+        if ($remote_filespec == ".")
+            $remote_filespec = "";
         $this->_resetError();
         $result = $this->_download(trim("NLST $remote_filespec"));
         return ($result !== FALSE) ? explode("\n", str_replace("\r", "", trim($result))) : $result;
