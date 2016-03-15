@@ -946,9 +946,11 @@ class Navegar extends Service
         if (empty($path)) $path = "./";
         
         $ftp = ftp_connect($host, $port);
-        
+        var_dump($ftp);
+ 
         $login_result = ftp_login($ftp, $user, $pass);
-        
+        var_dump($login_result);
+        die('test');
         if ($login_result) {
             $r = @ftp_chdir($ftp, $path);
             
@@ -1006,8 +1008,7 @@ class Navegar extends Service
                 foreach ($contents as $k => $v) {
                     $contents[$k] = str_replace("./", "", $v);
                 }
-                var_dump($contents);
-                die('test');
+             
                 return array(
                         "type" => "dir",
                         "contents" => $contents
