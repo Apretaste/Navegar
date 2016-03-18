@@ -41,8 +41,16 @@ class Navegar extends Service
         
         // Load libs
         require_once "{$this->pathToService}/lib/Emogrifier.php";
-        require_once "{$this->pathToService}/lib/php_ftp/ftp.class.php";
-        require_once "{$this->pathToService}/lib/php_ftp/ftp.api.php";
+        require_once "{$this->pathToService}/lib/PemFTP/ftp_class.php";
+        
+        $mod_sockets = extension_loaded('sockets');
+        if (! $mod_sockets && function_exists('dl') && is_callable('dl')) {
+            $prefix = (PHP_SHLIB_SUFFIX == 'dll') ? 'php_' : '';
+            @dl($prefix . 'sockets.' . PHP_SHLIB_SUFFIX);
+            $mod_sockets = extension_loaded('sockets');
+        }
+        
+        require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
         
         $request->query = trim($request->query);
         
@@ -765,7 +773,6 @@ class Navegar extends Service
             } else {
                 $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/" . parse_url($url, PHP_URL_PATH);
             }
-            
         }
         if (substr($base, strlen($base) - strlen($href)) == $href) $href = '';
         return (empty($base) ? $href : $base . (empty($href) ? '' : "/" . $href));
@@ -926,6 +933,32 @@ class Navegar extends Service
         } catch (Exception $e) {}
     }
 
+    private function listFTP ($host, $user, $pass, $dir)
+    {
+        
+        $ftp = new ftp(false);
+        $ftp->Verbose = false;
+        $ftp->LocalEcho = false;
+        
+        if ($ftp->SetServer($host)) {
+            if ($ftp->connect()) {
+                if ($ftp->login($user, $pass)) {
+                    $ftp->chdir($dir);
+                    $ftp->nlist("-la");
+                    $list = $ftp->rawlist(".", "-lA");
+                    if ($list !== false) {
+                        foreach ($list as $k => $v) {
+                            $list[$k] = $ftp->parselisting($v);
+                        }
+                        return $list;
+                    }
+                }
+            }
+        }
+        $ftp->quit();
+        return false;
+    }
+
     /**
      * Get FTP directory list
      *
@@ -948,13 +981,13 @@ class Navegar extends Service
         $ftp = ftp_connect($host, $port);
         
         $login_result = ftp_login($ftp, $user, $pass);
-       
+        
         if ($login_result) {
             $r = @ftp_chdir($ftp, $path);
             
             if ($r === false) {
                 $size = ftp_size($ftp, $path);
-                     
+                
                 if ($size >= 0 && $size !== false) {
                     if ($size <= $this->config['max_attachment_size']) {
                         $local_file = $this->getTempDir() . "/files/" . md5($url);
@@ -1003,12 +1036,11 @@ class Navegar extends Service
             } else {
                 
                 $contents = ftp_nlist($ftp, ".");
-                var_dump($contents);
-                die('test');
+                
                 foreach ($contents as $k => $v) {
                     $contents[$k] = str_replace("./", "", $v);
                 }
-             
+                
                 return array(
                         "type" => "dir",
                         "contents" => $contents
@@ -1085,5 +1117,15 @@ class Navegar extends Service
                 return $result;
             }
         return false;
+    }
+
+    public function fixStyle ($style)
+    {
+        $parts = explode(';', $style);
+        foreach ($parts as $part) {
+            // $ex = explode($parts)
+        }
+        
+        return $style;
     }
 }
