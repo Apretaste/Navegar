@@ -621,6 +621,15 @@ class Navegar extends Service
             else
                 $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
         }
+               
+        $body = $doc->saveHTML();
+        
+        // Set style to each element in DOM, based on CSS stylesheets
+        //$css = $this->fixStyle($css);
+        $emo = new Pelago\Emogrifier($body, $css);
+        $body = $emo->emogrify();
+        
+        @$doc->loadHTML($body);
         
         // Fixing styles
         
@@ -635,13 +644,6 @@ class Navegar extends Service
                 $link->setAttribute('style', $sty);
             }
         }
-        
-        $body = $doc->saveHTML();
-        
-        // Set style to each element in DOM, based on CSS stylesheets
-        $css = $this->fixStyle($css);
-        $emo = new Pelago\Emogrifier($body, $css);
-        $body = $emo->emogrify();
         
         // Get only the body
         $body = $tidy->repairString($body, array(
