@@ -645,6 +645,8 @@ class Navegar extends Service
             }
         }
         
+        $body = $doc->saveHTML();
+        
         // Get only the body
         $body = $tidy->repairString($body, array(
                 'output-xhtml' => true,
