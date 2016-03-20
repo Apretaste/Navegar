@@ -1151,12 +1151,12 @@ class Navegar extends Service
             $back_to_black = false;
             foreach ($oDeclaration->getRules() as $oRule) {
                 foreach ($oRule->getValues() as $aValues) {
-                   
+                    
                     if ($oRule->getRule() == 'color') {
                         
                         if ($aValues[0] instanceof CSSColor) {
                             $aValues[0]->toRGB();
-                            if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF') {
+                            if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
                                 $back_to_black = true;
                                 // $aValues[0]->setColor(array('r'=>0,'g'=>0,'b'=>0));
                             }
@@ -1180,7 +1180,7 @@ class Navegar extends Service
                 }
             }
             
-            if ( $back_to_black ){
+            if ($back_to_black) {
                 $rule = new CSSRule('background');
                 $rule->setValue('navy');
                 $oDeclaration->addRule($rule);
