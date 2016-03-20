@@ -1,0 +1,15 @@
+<phpunit>
+  <testsuites>
+    <testsuite name="PHP-CSS-Parser Tests">
+      <file>tests/CSSColorUtilsTest.php</file>
+      <file>tests/CSSColorTest.php</file>
+      <file>tests/CSSImportTest.php</file>
+      <file>tests/CSSDocumentTest.php</file>
+      <file>tests/CSSDeclarationBlockTest.php</file>
+      <file>tests/CSSParserTest.php</file>
+    </testsuite>
+    <testsuite name="PHP-CSS-Parser Bugs">
+      <directory>tests/bugs</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>

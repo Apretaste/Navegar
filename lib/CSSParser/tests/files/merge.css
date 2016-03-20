@@ -1,0 +1,9 @@
+#ruleset-1{
+  color: rgb(255,0,0);
+  margin: 0;
+  background: rgb(0,255,255) url('foobar.png') repeat-x; 
+}
+#ruleset-2{
+  background-image: none;
+  margin-bottom: 1em;
+}

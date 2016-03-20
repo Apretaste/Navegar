@@ -5,7 +5,7 @@
  * 
  * NAVEGAR service
  * 
- * @author kuma (kumarajiva2015@gmail.com)
+ * @author kuma (kumahavana@gmail.com)
  * @version 1.0
  */
 use Goutte\Client;
@@ -51,6 +51,8 @@ class Navegar extends Service
         }
         
         require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
+        
+        require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
         
         $request->query = trim($request->query);
         
@@ -620,6 +622,20 @@ class Navegar extends Service
                 $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
         }
         
+        // Fixing styles
+        
+        $links = $doc->getElementsByTagName('a');
+        
+        if ($links->length > 0) {
+            foreach ($links as $link) {
+                $sty = $link->getAttribute('style');
+                $sty = $this->fixStyle('a{' . $sty . '}');
+                $sty = substr($sty, 3);
+                $sty = substr($sty, 0, strlen($sty) - 1);
+                $link->setAttribute('style', $sty);
+            }
+        }
+        
         $body = $doc->saveHTML();
         
         // Set style to each element in DOM, based on CSS stylesheets
@@ -935,7 +951,6 @@ class Navegar extends Service
 
     private function listFTP ($host, $user, $pass, $dir)
     {
-        
         $ftp = new ftp(false);
         $ftp->Verbose = false;
         $ftp->LocalEcho = false;
@@ -1121,11 +1136,57 @@ class Navegar extends Service
 
     public function fixStyle ($style)
     {
-        $parts = explode(';', $style);
-        foreach ($parts as $part) {
-            // $ex = explode($parts)
+        $parser = new CSSParser(
+                array(
+                        'resolve_imports' => false,
+                        'absolute_urls' => false,
+                        'base_url' => null,
+                        'input_encoding' => null,
+                        'output_encoding' => 'UTF-8'
+                ));
+        
+        $oDoc = $parser->parseString($style);
+        
+        foreach ($oDoc->getAllDeclarationBlocks() as $oDeclaration) {
+            $back_to_black = false;
+            foreach ($oDeclaration->getRules() as $oRule) {
+                foreach ($oRule->getValues() as $aValues) {
+                   
+                    if ($oRule->getRule() == 'color') {
+                        
+                        if ($aValues[0] instanceof CSSColor) {
+                            $aValues[0]->toRGB();
+                            if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF') {
+                                $back_to_black = true;
+                                // $aValues[0]->setColor(array('r'=>0,'g'=>0,'b'=>0));
+                            }
+                        }
+                    }
+                    
+                    if ($oRule->getRule() == 'background-color' || $oRule->getRule() == 'background') {
+                        if ($back_to_black) {
+                            if ($aValues[0] instanceof CSSColor) {
+                                
+                                $aValues[0]->toRGB();
+                                $aValues[0]->setColor(array(
+                                        'r' => 0,
+                                        'g' => 0,
+                                        'b' => 0
+                                ));
+                                $back_to_black = false;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if ( $back_to_black ){
+                $rule = new CSSRule('background');
+                $rule->setValue('navy');
+                $oDeclaration->addRule($rule);
+            }
         }
         
-        return $style;
+        return $oDoc->__toString();
     }
 }
