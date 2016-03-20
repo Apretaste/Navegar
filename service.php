@@ -639,7 +639,7 @@ class Navegar extends Service
         $body = $doc->saveHTML();
         
         // Set style to each element in DOM, based on CSS stylesheets
-        
+        $css = $this->fixStyle($css);
         $emo = new Pelago\Emogrifier($body, $css);
         $body = $emo->emogrify();
         
