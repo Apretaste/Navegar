@@ -50,7 +50,8 @@ class Navegar extends Service
         
         require_once $this->pathToService . '/lib/Emogrifier.php';
         require_once $this->pathToService . '/lib/PemFTP/ftp_class.php';
-        require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
+        //require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
+        require_once $this->pathToService . '/lib/PemFTP/ftp_class_pure.php';
         require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
         
         $request->query = trim($request->query);
