@@ -50,7 +50,8 @@ class Navegar extends Service
         
         require_once $this->pathToService . '/lib/Emogrifier.php';
         require_once $this->pathToService . '/lib/PemFTP/ftp_class.php';
-        //require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
+        // require_once $this->pathToService . '/lib/PemFTP/ftp_class_' .
+        // ($mod_sockets ? 'sockets' : 'pure') . '.php';
         require_once $this->pathToService . '/lib/PemFTP/ftp_class_pure.php';
         require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
         
@@ -1054,55 +1055,36 @@ class Navegar extends Service
         if (empty($pass)) $pass = 'ftp';
         if (empty($path)) $path = "./";
         
-        $list = $this->listFTP($host, $port, $user, $pass, $path);
+        $ftp = new ftp(false);
+        $ftp->Verbose = false;
+        $ftp->LocalEcho = false;
         
-        if ($list !== false) {
-            $i = 0;
-            $newlist;
-            foreach ($list as $k => $v) {
-                $s = $v['size'];
-                if ($s > 1025) {
-                    $s = $s / 1024;
-                    if ($s > 1024) {
-                        $s = $s / 1024;
-                        if ($s > 1024) {
-                            $s = $s / 1024;
-                            $s = number_format($s, 0) . " GB";
-                        } else
-                            $s = number_format($s, 0) . " MB";
-                    } else
-                        $s = number_format($s, 0) . " KB";
-                } else
-                    $s = number_format($s, 0) . " B";
-                $v['size'] = $s;
-                $newlist[] = $v;
-                $i ++;
-                if ($i > 200) break;
-            }
-            
-            return array(
-                    "type" => "dir",
-                    "contents" => $newlist
-            );
-        }
-        
-        $ftp = ftp_connect($host, $port);
-        
-        $login_result = ftp_login($ftp, $user, $pass);
-        
-        if ($login_result) {
-            $r = @ftp_chdir($ftp, $path);
-            
-            if ($r === false) {
-                $size = ftp_size($ftp, $path);
+        if ($ftp->SetServer($host, $port)) if ($ftp->connect()) {
+            if ($ftp->login($user, $pass)) {
+                $path = str_replace("//", "", $path);
+                $size = $ftp->filesize($path);
+                if (empty("$size")) $size = false;
+                // die("$path - $size");
                 
+                /*
+                 * $ftp = ftp_connect($host, $port);
+                 *
+                 * $login_result = ftp_login($ftp, $user, $pass);
+                 *
+                 * if ($login_result) {
+                 * $r = @ftp_chdir($ftp, $path);
+                 *
+                 * if ($r === false) {
+                 * $size = ftp_size($ftp, $path);
+                 */
                 if ($size >= 0 && $size !== false) {
                     if ($size <= $this->config['max_attachment_size']) {
                         $local_file = $this->getTempDir() . "/files/" . md5($url);
                         
-                        $r = ftp_get($ftp, $local_file, $path, FTP_BINARY);
+                        // $r = ftp_get($ftp, $local_file, $path, FTP_BINARY);
+                        $r = $ftp->get($path, $local_file);
                         
-                        if ($r === true) {
+                        if ($r !== false) {
                             $finalname = $local_file;
                             $zipped = false;
                             // Trying to zip file
@@ -1140,53 +1122,48 @@ class Navegar extends Service
                                 "size" => $size
                         );
                     }
+                } else {
+                    
+                    /*
+                     * $contents = ftp_nlist($ftp, ".");
+                     *
+                     * foreach ($contents as $k => $v) {
+                     * $contents[$k] = str_replace("./", "", $v);
+                     * }
+                     */
+                    
+                    $list = $this->listFTP($host, $port, $user, $pass, $path);
+                    
+                    if ($list !== false) {
+                        $i = 0;
+                        $newlist;
+                        foreach ($list as $k => $v) {
+                            $s = $v['size'];
+                            if ($s > 1025) {
+                                $s = $s / 1024;
+                                if ($s > 1024) {
+                                    $s = $s / 1024;
+                                    if ($s > 1024) {
+                                        $s = $s / 1024;
+                                        $s = number_format($s, 0) . " GB";
+                                    } else
+                                        $s = number_format($s, 0) . " MB";
+                                } else
+                                    $s = number_format($s, 0) . " KB";
+                            } else
+                                $s = number_format($s, 0) . " B";
+                            $v['size'] = $s;
+                            $newlist[] = $v;
+                            $i ++;
+                            if ($i > 200) break;
+                        }
+                        
+                        return array(
+                                "type" => "dir",
+                                "contents" => $newlist
+                        );
+                    }
                 }
-            } else {
-                
-                /*
-                 * $contents = ftp_nlist($ftp, ".");
-                 *
-                 * foreach ($contents as $k => $v) {
-                 * $contents[$k] = str_replace("./", "", $v);
-                 * }
-                 */
-                
-                /*
-                 * array(17) {
-                 * [0]=>
-                 * array(15) {
-                 * ["isdir"]=>
-                 * bool(true)
-                 * ["islink"]=>
-                 * bool(false)
-                 * ["type"]=>
-                 * string(1) "d"
-                 * ["perms"]=>
-                 * string(10) "drwxr-xr-x"
-                 * ["number"]=>
-                 * string(1) "1"
-                 * ["owner"]=>
-                 * string(3) "ftp"
-                 * ["group"]=>
-                 * string(3) "ftp"
-                 * ["size"]=>
-                 * string(1) "0"
-                 * ["month"]=>
-                 * string(3) "Feb"
-                 * ["day"]=>
-                 * string(2) "09"
-                 * ["year"]=>
-                 * string(4) "2016"
-                 * ["hour"]=>
-                 * int(0)
-                 * ["minute"]=>
-                 * int(0)
-                 * ["time"]=>
-                 * int(1454976000)
-                 * ["name"]=>
-                 * string(7) "android"
-                 * }
-                 */
             }
         }
         
@@ -1292,11 +1269,12 @@ class Navegar extends Service
                                 $aValues[0]->toRGB();
                                 if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
                                     // $back_to_black = true;
-                                    $aValues[0]->setColor(array(
-                                            'r' => 0,
-                                            'g' => 0,
-                                            'b' => 255
-                                    ));
+                                    $aValues[0]->setColor(
+                                            array(
+                                                    'r' => 0,
+                                                    'g' => 0,
+                                                    'b' => 255
+                                            ));
                                 } /*
                                    * else {
                                    * $aValues[0]->setColor(

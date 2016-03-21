@@ -539,7 +539,9 @@ class ftp_base
         }
         if (! $this->_exec('SIZE ' . $pathname, 'filesize')) return FALSE;
         if (! $this->_checkCode()) return FALSE;
-        return preg_replace('@^[0-9]{3} ([0-9]+)@' . CRLF, "\\1", $this->_message);
+        //die($this->_message);
+        //return preg_replace('@^[0-9]{3} ([0-9]+)@' . CRLF, "\\1", $this->_message);
+        return substr($this->_message, strpos($this->_message,' ')+1);
     }
 
     function abort ()
