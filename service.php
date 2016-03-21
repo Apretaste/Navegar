@@ -588,8 +588,8 @@ class Navegar extends Service
         foreach ($replace as $rep) {
             if (is_null($rep['newnode']))
                 $rep['parent']->removeChild($rep['oldnode']);
-                else
-                    $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+            else
+                $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
         }
         
         $body = $doc->saveHTML();
@@ -1051,6 +1051,37 @@ class Navegar extends Service
         if (empty($pass)) $pass = 'ftp';
         if (empty($path)) $path = "./";
         
+        $list = $this->listFTP($host, $port, $user, $pass, $path);
+        
+        if (is_array($list)) {
+            $i = 0;
+            $newlist;
+            foreach ($list as $k => $v) {
+                $s = $v['size'];
+                if ($s > 1025) {
+                    $s = $s / 1024;
+                    if ($s > 1024) {
+                        $s = $s / 1024;
+                        if ($s > 1024) {
+                            $s = $s / 1024;
+                            $s = number_format($s, 0) . " GB";
+                        } else
+                            $s = number_format($s, 0) . " MB";
+                    } else
+                        $s = number_format($s, 0) . " KB";
+                } else
+                    $s = number_format($s, 0) . " B";
+                $v['size'] = $s;
+                $newlist[] = $v;
+                $i ++;
+                if ($i > 200) break;
+            }
+            
+            return array(
+                    "type" => "dir",
+                    "contents" => $newlist
+            );
+        }
         $ftp = ftp_connect($host, $port);
         
         $login_result = ftp_login($ftp, $user, $pass);
@@ -1108,8 +1139,6 @@ class Navegar extends Service
                 }
             } else {
                 
-                $list = $this->listFTP($host, $port, $user, $pass, $path);
-                
                 /*
                  * $contents = ftp_nlist($ftp, ".");
                  *
@@ -1154,33 +1183,6 @@ class Navegar extends Service
                  * string(7) "android"
                  * }
                  */
-                $i = 0;
-                $newlist;
-                foreach ($list as $k => $v) {
-                    $s = $v['size'];
-                    if ($s > 1025) {
-                        $s = $s / 1024;
-                        if ($s > 1024) {
-                            $s = $s / 1024;
-                            if ($s > 1024) {
-                                $s = $s / 1024;
-                                $s = number_format($s, 0) . " GB";
-                            } else
-                                $s = number_format($s, 0) . " MB";
-                        } else
-                            $s = number_format($s, 0) . " KB";
-                    } else
-                        $s = number_format($s, 0) . " B";
-                    $v['size'] = $s;
-                    $newlist[] = $v;
-                    $i ++;
-                    if ($i > 200) break;
-                }
-                
-                return array(
-                        "type" => "dir",
-                        "contents" => $newlist
-                );
             }
         }
         
@@ -1285,16 +1287,22 @@ class Navegar extends Service
                             if ($aValues[0] instanceof CSSColor) {
                                 $aValues[0]->toRGB();
                                 if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
-                                    //$back_to_black = true;
-                                    $aValues[0]->setColor(array('r'=>0,'g'=>0,'b'=>255));
-                                } /*else {
-                                    $aValues[0]->setColor(
-                                            array(
-                                                    'r' => 0,
-                                                    'g' => 0,
-                                                    'b' => 255
-                                            ));
-                                }*/
+                                    // $back_to_black = true;
+                                    $aValues[0]->setColor(array(
+                                            'r' => 0,
+                                            'g' => 0,
+                                            'b' => 255
+                                    ));
+                                } /*
+                                   * else {
+                                   * $aValues[0]->setColor(
+                                   * array(
+                                   * 'r' => 0,
+                                   * 'g' => 0,
+                                   * 'b' => 255
+                                   * ));
+                                   * }
+                                   */
                             }
                         }
                         
