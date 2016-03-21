@@ -1060,11 +1060,11 @@ class Navegar extends Service
         $ftp->LocalEcho = false;
         
         if ($ftp->SetServer($host, $port)) if ($ftp->connect()) {
+            
             if ($ftp->login($user, $pass)) {
                 $path = str_replace("//", "", $path);
                 $size = $ftp->filesize($path);
                 if (empty("$size")) $size = false;
-                // die("$path - $size");
                 
                 /*
                  * $ftp = ftp_connect($host, $port);
