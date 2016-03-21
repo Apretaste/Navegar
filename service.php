@@ -1055,7 +1055,7 @@ class Navegar extends Service
         
         $list = $this->listFTP($host, $port, $user, $pass, $path);
         
-        if (is_array($list)) {
+        if ($list !== false) {
             $i = 0;
             $newlist;
             foreach ($list as $k => $v) {
@@ -1084,6 +1084,7 @@ class Navegar extends Service
                     "contents" => $newlist
             );
         }
+        
         $ftp = ftp_connect($host, $port);
         
         $login_result = ftp_login($ftp, $user, $pass);
