@@ -583,6 +583,15 @@ class Navegar extends Service
             }
         }
         
+        // Replace/remove childs
+        
+        foreach ($replace as $rep) {
+            if (is_null($rep['newnode']))
+                $rep['parent']->removeChild($rep['oldnode']);
+                else
+                    $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+        }
+        
         $body = $doc->saveHTML();
         
         // Set style to each element in DOM, based on CSS stylesheets
@@ -699,7 +708,7 @@ class Navegar extends Service
         
         // strip unnecessary, dangerous tags
         $body = strip_tags($body, 
-                '<input><button><a><abbr><acronym><address><area><article><aside><audio><b><base><basefont><bdi><bdo><big><blockquote><br><canvas><caption><center><cite><code><col><colgroup><command><datalist><dd><del><details><dfn><dialog><dir><div><dl><dt><em><embed><fieldset><figcaption><figure><font><footer><form><frame><frameset><head><header><h1> - <h6><hr><i><ins><kbd><keygen><label><legend><li><link><map><mark><menu><meta><meter><nav><noframes><noscript><object><ol><optgroup><option><output><p><param><pre><progress><q><rp><rt><ruby><s><samp><section><select><small><source><span><strike><strong><style><sub><summary><sup><table><tbody><td><textarea><tfoot><th><thead><time><title><tr><track><tt><u><ul><var><video><wbr><h2><h3><script>');
+                '<input><button><a><abbr><acronym><address><area><article><aside><audio><b><base><basefont><bdi><bdo><big><blockquote><br><canvas><caption><center><cite><code><col><colgroup><command><datalist><dd><del><details><dfn><dialog><dir><div><dl><dt><em><embed><fieldset><figcaption><figure><font><footer><form><frame><frameset><head><header><h1> - <h6><hr><i><ins><kbd><keygen><label><legend><li><link><map><mark><menu><meta><meter><nav><noframes><noscript><object><ol><optgroup><option><output><p><param><pre><progress><q><rp><rt><ruby><s><samp><section><select><small><source><span><strike><strong><style><sub><summary><sup><table><tbody><td><textarea><tfoot><th><thead><time><title><tr><track><tt><u><ul><var><video><wbr><h2><h3>');
         
         // Compress the returning code
         $body = preg_replace('/\s+/S', " ", $body);
