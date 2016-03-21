@@ -40,8 +40,6 @@ class Navegar extends Service
         $this->wwwroot = $di->get('path')['root'];
         
         // Load libs
-        require_once "{$this->pathToService}/lib/Emogrifier.php";
-        require_once "{$this->pathToService}/lib/PemFTP/ftp_class.php";
         
         $mod_sockets = extension_loaded('sockets');
         if (! $mod_sockets && function_exists('dl') && is_callable('dl')) {
@@ -50,8 +48,9 @@ class Navegar extends Service
             $mod_sockets = extension_loaded('sockets');
         }
         
+        require_once $this->pathToService . '/lib/Emogrifier.php';
+        require_once $this->pathToService . '/lib/PemFTP/ftp_class.php';
         require_once $this->pathToService . '/lib/PemFTP/ftp_class_' . ($mod_sockets ? 'sockets' : 'pure') . '.php';
-        
         require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
         
         $request->query = trim($request->query);
@@ -77,7 +76,6 @@ class Navegar extends Service
         }
         
         // If $argument is not an URL, then search on the web
-        
         if (! $this->isUrl($request->query)) {
             return $this->searchResponse($request, 'web');
         }
@@ -555,7 +553,7 @@ class Navegar extends Service
                     // phase 1: trying href as full css path
                     $href = $this->getFullHref($style->getAttribute('href'), $url);
                     
-                    $r = file_get_contents($href);
+                    $r = @file_get_contents($href);
                     
                     if ($r === false) {
                         // phase 2: trying href with url host
@@ -585,13 +583,30 @@ class Navegar extends Service
             }
         }
         
+        $body = $doc->saveHTML();
+        
+        // Set style to each element in DOM, based on CSS stylesheets
+        // $css = $this->fixStyle($css);
+        $emo = new Pelago\Emogrifier($body, $css);
+        $body = $emo->emogrify();
+        
+        @$doc->loadHTML($body);
+        
         // Convert image tags to NAVEGAR links
         
+        $style_navegar_links = 'margin:10px; background:gray;color:blue;padding:5px;max-width:300px;max-height:300px;border: none; line-height: 2;';
         $images = $doc->getElementsByTagName('img');
         
         if ($images->length > 0) {
             foreach ($images as $image) {
                 $src = $image->getAttribute('src');
+                $width = $image->getAttribute('width');
+                $height = $image->getAttribute('height');
+                $style = $image->getAttribute('style');
+                
+                if (empty("$width")) $width = null;
+                if (empty("$height")) $height = null;
+                if (empty("$style")) $style = null;
                 
                 $imgname = explode("/", $src);
                 $imgname = $imgname[count($imgname) - 1];
@@ -602,12 +617,30 @@ class Navegar extends Service
                 ), '_', $imgname);
                 
                 $node = $doc->createElement('a', "IMAGEN");
-                $node->setAttribute('style', 'text-align: center;margin:10px; background:#eeeeee;color:navy;padding:5px;width:100px;height:100px;border: 1px solid navy;line-height: 2;');
+                $node->setAttribute('style', (! is_null($style) ? $style : "") . $style_navegar_links . (! is_null($width) ? ";width:{$width}px;" : "") . (is_null($height) ? "height:{$height}px;" : ""));
                 $node->setAttribute('href', $this->convertToMailTo($src, $url));
                 
                 $replace[] = array(
                         'parent' => $image->parentNode,
                         'oldnode' => $image,
+                        'newnode' => $node
+                );
+            }
+        }
+        
+        // Convert IFRAMES to NAVEGAR links
+        
+        $iframes = $doc->getElementsByTagName('iframe');
+        
+        if ($iframes->length > 0) {
+            foreach ($iframes as $iframe) {
+                $src = $iframe->getAttribute('src');
+                $node = $doc->createElement('a', "Clic aqu&iacute; para ver este marco");
+                $node->setAttribute('style', $style_navegar_links);
+                $node->setAttribute('href', $this->convertToMailTo($src, $url));
+                $replace[] = array(
+                        'parent' => $iframe->parentNode,
+                        'oldnode' => $iframe,
                         'newnode' => $node
                 );
             }
@@ -621,30 +654,31 @@ class Navegar extends Service
             else
                 $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
         }
-               
-        $body = $doc->saveHTML();
-        
-        // Set style to each element in DOM, based on CSS stylesheets
-        //$css = $this->fixStyle($css);
-        $emo = new Pelago\Emogrifier($body, $css);
-        $body = $emo->emogrify();
-        
-        @$doc->loadHTML($body);
         
         // Fixing styles
         
-        $links = $doc->getElementsByTagName('a');
+        $tags_to_fix = array(
+                'a',
+                'p',
+                'label',
+                'div',
+                'pre'
+        );
         
-        if ($links->length > 0) {
-            foreach ($links as $link) {
-                $sty = $link->getAttribute('style');
-                $sty = $this->fixStyle('a{' . $sty . '}');
-                $sty = substr($sty, 3);
-                $sty = substr($sty, 0, strlen($sty) - 1);
-                $link->setAttribute('style', $sty);
+        foreach ($tags_to_fix as $tag) {
+            
+            $links = $doc->getElementsByTagName($tag);
+            
+            if ($links->length > 0) {
+                foreach ($links as $link) {
+                    $sty = $link->getAttribute('style');
+                    $sty = $this->fixStyle('a{' . $sty . '}');
+                    $sty = substr($sty, 3);
+                    $sty = substr($sty, 0, strlen($sty) - 1);
+                    $link->setAttribute('style', $sty);
+                }
             }
         }
-        
         $body = $doc->saveHTML();
         
         // Get only the body
@@ -953,13 +987,22 @@ class Navegar extends Service
         } catch (Exception $e) {}
     }
 
-    private function listFTP ($host, $user, $pass, $dir)
+    /**
+     * Directory listing
+     *
+     * @param string $host            
+     * @param string $user            
+     * @param string $pass            
+     * @param string $dir            
+     * @return boolean|string|boolean
+     */
+    private function listFTP ($host, $port = 21, $user = "anonymous", $pass = "123", $dir = "/")
     {
         $ftp = new ftp(false);
         $ftp->Verbose = false;
         $ftp->LocalEcho = false;
         
-        if ($ftp->SetServer($host)) {
+        if ($ftp->SetServer($host, $port)) {
             if ($ftp->connect()) {
                 if ($ftp->login($user, $pass)) {
                     $ftp->chdir($dir);
@@ -974,7 +1017,9 @@ class Navegar extends Service
                 }
             }
         }
+        
         $ftp->quit();
+        
         return false;
     }
 
@@ -1054,15 +1099,78 @@ class Navegar extends Service
                 }
             } else {
                 
-                $contents = ftp_nlist($ftp, ".");
+                $list = $this->listFTP($host, $port, $user, $pass, $path);
                 
-                foreach ($contents as $k => $v) {
-                    $contents[$k] = str_replace("./", "", $v);
+                /*
+                 * $contents = ftp_nlist($ftp, ".");
+                 *
+                 * foreach ($contents as $k => $v) {
+                 * $contents[$k] = str_replace("./", "", $v);
+                 * }
+                 */
+                
+                /*
+                 * array(17) {
+                 * [0]=>
+                 * array(15) {
+                 * ["isdir"]=>
+                 * bool(true)
+                 * ["islink"]=>
+                 * bool(false)
+                 * ["type"]=>
+                 * string(1) "d"
+                 * ["perms"]=>
+                 * string(10) "drwxr-xr-x"
+                 * ["number"]=>
+                 * string(1) "1"
+                 * ["owner"]=>
+                 * string(3) "ftp"
+                 * ["group"]=>
+                 * string(3) "ftp"
+                 * ["size"]=>
+                 * string(1) "0"
+                 * ["month"]=>
+                 * string(3) "Feb"
+                 * ["day"]=>
+                 * string(2) "09"
+                 * ["year"]=>
+                 * string(4) "2016"
+                 * ["hour"]=>
+                 * int(0)
+                 * ["minute"]=>
+                 * int(0)
+                 * ["time"]=>
+                 * int(1454976000)
+                 * ["name"]=>
+                 * string(7) "android"
+                 * }
+                 */
+                $i = 0;
+                $newlist;
+                foreach ($list as $k => $v) {
+                    $s = $v['size'];
+                    if ($s > 1025) {
+                        $s = $s / 1024;
+                        if ($s > 1024) {
+                            $s = $s / 1024;
+                            if ($s > 1024) {
+                                $s = $s / 1024;
+                                $s = number_format($s, 0) . " GB";
+                            } else
+                                $s = number_format($s, 0) . " MB";
+                        } else
+                            $s = number_format($s, 0) . " KB";
+                    } else
+                        $s = number_format($s, 0) . " B";
+                    $v['size'] = $s;
+                    $newlist[] = $v;
+                    $i ++;
+                    if ($i > 200) break;
                 }
                 
                 return array(
                         "type" => "dir",
-                        "contents" => $contents
+                        "contents" => $newlist
                 );
             }
         }
@@ -1138,59 +1246,115 @@ class Navegar extends Service
         return false;
     }
 
+    /**
+     * Fix style for email sites
+     *
+     * @param string $style            
+     * @return string
+     */
     public function fixStyle ($style)
     {
-        $parser = new CSSParser(
-                array(
-                        'resolve_imports' => false,
-                        'absolute_urls' => false,
-                        'base_url' => null,
-                        'input_encoding' => null,
-                        'output_encoding' => 'UTF-8'
-                ));
-        
-        $oDoc = $parser->parseString($style);
-        
-        foreach ($oDoc->getAllDeclarationBlocks() as $oDeclaration) {
-            $back_to_black = false;
-            foreach ($oDeclaration->getRules() as $oRule) {
-                foreach ($oRule->getValues() as $aValues) {
-                    
-                    if ($oRule->getRule() == 'color') {
+        try {
+            $parser = new CSSParser(
+                    array(
+                            'resolve_imports' => false,
+                            'absolute_urls' => false,
+                            'base_url' => null,
+                            'input_encoding' => null,
+                            'output_encoding' => 'UTF-8'
+                    ));
+            
+            $oDoc = $parser->parseString($style);
+            
+            foreach ($oDoc->getAllDeclarationBlocks() as $oDeclaration) {
+                $back_to_black = false;
+                foreach ($oDeclaration->getRules() as $oRule) {
+                    foreach ($oRule->getValues() as $aValues) {
                         
-                        if ($aValues[0] instanceof CSSColor) {
-                            $aValues[0]->toRGB();
-                            if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
-                                $back_to_black = true;
-                                // $aValues[0]->setColor(array('r'=>0,'g'=>0,'b'=>0));
+                        if ($oRule->getRule() == 'color') {
+                            
+                            if ($aValues[0] instanceof CSSColor) {
+                                $aValues[0]->toRGB();
+                                if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
+                                    //$back_to_black = true;
+                                    $aValues[0]->setColor(array('r'=>0,'g'=>0,'b'=>255));
+                                } /*else {
+                                    $aValues[0]->setColor(
+                                            array(
+                                                    'r' => 0,
+                                                    'g' => 0,
+                                                    'b' => 255
+                                            ));
+                                }*/
                             }
                         }
-                    }
-                    
-                    if ($oRule->getRule() == 'background-color' || $oRule->getRule() == 'background') {
-                        if ($back_to_black) {
-                            if ($aValues[0] instanceof CSSColor) {
-                                
-                                $aValues[0]->toRGB();
-                                $aValues[0]->setColor(array(
-                                        'r' => 0,
-                                        'g' => 0,
-                                        'b' => 0
-                                ));
-                                $back_to_black = false;
+                        
+                        if ($oRule->getRule() == 'background-color' || $oRule->getRule() == 'background') {
+                            if ($back_to_black) {
+                                if ($aValues[0] instanceof CSSColor) {
+                                    
+                                    $aValues[0]->toRGB();
+                                    $aValues[0]->setColor(
+                                            array(
+                                                    'r' => 0,
+                                                    'g' => 0,
+                                                    'b' => 0
+                                            ));
+                                    $back_to_black = false;
+                                }
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'width') {
+                            if ($aValues[0] instanceof CSSSize) {
+                                if ($aValues[0]->getSize() > 400 && $aValues[0]->getUnit() == 'px') {
+                                    $aValues[0]->setSize(400);
+                                }
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'height') {
+                            if ($aValues[0] instanceof CSSSize) {
+                                if ($aValues[0]->getSize() > 400 && $aValues[0]->getUnit() == 'px') {
+                                    $aValues[0]->setSize(400);
+                                }
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'position') {
+                            $oRule->setValue('relative');
+                        }
+                        
+                        if ($oRule->getRule() == 'display') {
+                            if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
+                                $oRule->setValue('block');
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'visibility') {
+                            if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
+                                $oRule->setValue('inherit');
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'opacity') {
+                            if ($aValues[0] instanceof CSSSize) {
+                                $aValues[0]->setSize('100');
                             }
                         }
                     }
                 }
+                
+                if ($back_to_black) {
+                    $rule = new CSSRule('background');
+                    $rule->setValue('navy');
+                    $oDeclaration->addRule($rule);
+                }
             }
             
-            if ($back_to_black) {
-                $rule = new CSSRule('background');
-                $rule->setValue('navy');
-                $oDeclaration->addRule($rule);
-            }
+            return $oDoc->__toString();
+        } catch (Exception $e) {
+            return $style;
         }
-        
-        return $oDoc->__toString();
     }
 }
