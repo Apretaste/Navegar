@@ -592,6 +592,8 @@ class Navegar extends Service
                 $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
         }
         
+        $replace = array();
+        
         $body = $doc->saveHTML();
         
         // Set style to each element in DOM, based on CSS stylesheets
@@ -655,7 +657,7 @@ class Navegar extends Service
             }
         }
         
-        // Replace/remove childs
+        // Replace/remove childs [again]
         
         foreach ($replace as $rep) {
             if (is_null($rep['newnode']))
