@@ -508,7 +508,8 @@ class Navegar extends Service
         if ($scripts->length > 0) {
             foreach ($scripts as $script) {
                 $src = $this->getFullHref($script->getAttribute('src'), $url);
-                $resources[$src] = $src;
+                
+                if ($src != $url) $resources[$src] = $src;
             }
         }
         
@@ -588,10 +589,14 @@ class Navegar extends Service
         // Replace/remove childs
         
         foreach ($replace as $rep) {
-            if (is_null($rep['newnode']))
-                $rep['parent']->removeChild($rep['oldnode']);
-            else
-                $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+            try {
+                if (is_null($rep['newnode']))
+                    $rep['parent']->removeChild($rep['oldnode']);
+                else
+                    $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+            } catch (Exception $e) {
+                continue;
+            }
         }
         
         $replace = array();
@@ -607,7 +612,14 @@ class Navegar extends Service
         
         // Convert image tags to NAVEGAR links
         
-        $style_navegar_links = 'margin:10px; background:gray;color:blue;padding:5px;max-width:300px;max-height:300px;border: none; line-height: 2;';
+        $style_navegar_links = 'margin:10px; background:#5EBB47;color:#FFFFFE;padding:5px;max-width:300px;max-height:300px;border: none; line-height: 2; text-decoration:none;';
+        $stroke = '#5dbd00';
+        $fill = '#5EBB47';
+        $text = '#FFFFFE';
+        $width = 150;
+        $fontsize = 16;
+        $height = 44;
+        $style_navegar_links = "background-color:$fill;border:1px solid $stroke;border-radius:3px;color:$text;display:inline-block;font-family:sans-serif;font-size:{$fontsize}px;line-height:{$height}px;text-align:center;text-decoration:none;width:{$width}px;-webkit-text-size-adjust:none;mso-hide:all;";
         $images = $doc->getElementsByTagName('img');
         
         if ($images->length > 0) {
@@ -648,7 +660,9 @@ class Navegar extends Service
         if ($iframes->length > 0) {
             foreach ($iframes as $iframe) {
                 $src = $iframe->getAttribute('src');
-                $node = $doc->createElement('a', "Clic aqu&iacute; para ver este marco");
+                // $button = $this->buildButton($this->convertToMailTo($src,
+                // $url), "[ MARCO ]");
+                $node = $doc->createElement('a', "P&Aacute;GINA");
                 $node->setAttribute('style', $style_navegar_links);
                 $node->setAttribute('href', $this->convertToMailTo($src, $url));
                 $replace[] = array(
@@ -656,27 +670,42 @@ class Navegar extends Service
                         'oldnode' => $iframe,
                         'newnode' => $node
                 );
+                $resources[$src] = $src;
+            }
+        }
+        
+        $tags_to_fix = explode(' ', 'a p label div pre h1 h2 h3 h4 h5 button i b u li ol');
+        
+        foreach ($tags_to_fix as $tag) {
+            
+            $tags = $doc->getElementsByTagName($tag);
+            if ($tags->length > 0) {
+                foreach ($tags as $tag) {
+                    if (trim(strip_tags($tag->nodeValue)) == '') {
+                        $replace[] = array(
+                                'parent' => $tag->parentNode,
+                                'oldnode' => $tag,
+                                'newnode' => null
+                        );
+                    }
+                }
             }
         }
         
         // Replace/remove childs [again]
         
         foreach ($replace as $rep) {
-            if (is_null($rep['newnode']))
-                $rep['parent']->removeChild($rep['oldnode']);
-            else
-                $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+            try {
+                if (is_null($rep['newnode']))
+                    $rep['parent']->removeChild($rep['oldnode']);
+                else
+                    $rep['parent']->replaceChild($rep['newnode'], $rep['oldnode']);
+            } catch (Exception $e) {
+                continue;
+            }
         }
         
         // Fixing styles
-        
-        $tags_to_fix = array(
-                'a',
-                'p',
-                'label',
-                'div',
-                'pre'
-        );
         
         foreach ($tags_to_fix as $tag) {
             
@@ -838,9 +867,12 @@ class Navegar extends Service
                 if (! $this->isHttpURL($url)) $url = 'http://' . $url;
                 $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/";
             } else {
-                $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/" . parse_url($url, PHP_URL_PATH);
+                $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
             }
         }
+        
+        if (substr($href, 0, 1) == "/") $href = substr($href, 1);
+        if (substr($base, - 1, 1) == "/") $base = substr($base, 0, strlen($base) - 1);
         if (substr($base, strlen($base) - strlen($href)) == $href) $href = '';
         return (empty($base) ? $href : $base . (empty($href) ? '' : "/" . $href));
     }
@@ -878,6 +910,8 @@ class Navegar extends Service
      */
     private function convertToMailTo ($href, $url, $body = '', $ignoreSandbox = false)
     {
+        if ($href[0] != '?') $url = dirname($url);
+        
         // create direct link for the sandbox
         $di = \Phalcon\DI\FactoryDefault::getDefault();
         
@@ -1314,6 +1348,7 @@ class Navegar extends Service
                         
                         if ($oRule->getRule() == 'height') {
                             if ($aValues[0] instanceof CSSSize) {
+                                if ($aValues[0]->getUnit() == '%') $aValues[0]->setSize(400);
                                 if ($aValues[0]->getSize() > 400 && $aValues[0]->getUnit() == 'px') {
                                     $aValues[0]->setSize(400);
                                 }
@@ -1321,7 +1356,7 @@ class Navegar extends Service
                         }
                         
                         if ($oRule->getRule() == 'position') {
-                            $oRule->setValue('relative');
+                            $oRule->setValue('inherit');
                         }
                         
                         if ($oRule->getRule() == 'display') {
@@ -1338,9 +1373,30 @@ class Navegar extends Service
                         
                         if ($oRule->getRule() == 'opacity') {
                             if ($aValues[0] instanceof CSSSize) {
-                                $aValues[0]->setSize('100');
+                                $aValues[0]->setSize(100);
                             }
                         }
+                        
+                        if ($oRule->getRule() == 'float') $oRule->setValue('none');
+                        
+                        if ($oRule->getRule() == 'left') {
+                            if ($aValues[0] instanceof CSSSize) {
+                                $s = $aValues[0]->getSize();
+                                if ($aValues[0]->isRelative()) {
+                                    $aValues[0]->setSize(0);
+                                    $aValues[0]->setUnit('px');
+                                }
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'margin-left') {
+                            if ($aValues[0] instanceof CSSSize) {
+                                if ($aValues[0]->getSize() < 0) $aValues[0]->setSize(0);
+                            }
+                        }
+                        
+                        if ($oRule->getRule() == 'right') $oRule->setValue('0px');
+                        if ($oRule->getRule() == 'top') $oRule->setValue('0px');
                     }
                 }
                 
@@ -1353,7 +1409,25 @@ class Navegar extends Service
             
             return $oDoc->__toString();
         } catch (Exception $e) {
+            // die($e->getMessage());
             return $style;
         }
+    }
+
+    private function buildButton ($linkto, $caption)
+    {
+        $width = 150;
+        $fontsize = 16;
+        $height = 44;
+        $stroke = '#5dbd00';
+        $fill = '#5EBB47';
+        $text = '#FFFFFF';
+        return "<!--[if mso]>
+        <v:roundrect xmlns:v='urn:schemas-microsoft-com:vml' xmlns:w='urn:schemas-microsoft-com:office:word' href='$linkto' style='height:{$height}px;v-text-anchor:middle;width:{$width}px;' arcsize='5%' strokecolor='$stroke' fillcolor='$fill'>
+        <w:anchorlock/>
+        <center style='color:$text;font-family:Helvetica, Arial,sans-serif;font-size:{$fontsize}px;'>$caption</center>
+        </v:roundrect>
+        <![endif]-->
+        <a href='$linkto' style='background-color:$fill;border:1px solid $stroke;border-radius:3px;color:$text;display:inline-block;font-family:sans-serif;font-size:{$fontsize}px;line-height:{$height}px;text-align:center;text-decoration:none;width:{$width}px;-webkit-text-size-adjust:none;mso-hide:all;'>$caption</a>";
     }
 }
