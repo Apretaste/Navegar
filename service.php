@@ -1291,7 +1291,7 @@ class Navegar extends Service
                     ));
             
             $oDoc = $parser->parseString($style);
-            
+            $contrast = 'white';
             foreach ($oDoc->getAllDeclarationBlocks() as $oDeclaration) {
                 $back_to_black = false;
                 foreach ($oDeclaration->getRules() as $oRule) {
@@ -1301,7 +1301,14 @@ class Navegar extends Service
                             
                             if ($aValues[0] instanceof CSSColor) {
                                 $aValues[0]->toRGB();
-                                if (strtoupper($aValues[0]->getHexValue()) == '#FFFFFF' || strtoupper($aValues[0]->getHexValue()) == '#FFF') {
+                                $contrast = $this->getContrastYIQ(strtoupper($aValues[0]->getHexValue()));
+                                $hexcolor = substr($aValues[0]->getHexValue(), 1);
+                                if ((hexdec($hexcolor) > 0xffffff / 2)) {
+                                    // if
+                                    // (strtoupper($aValues[0]->getHexValue())
+                                    // == '#FFFFFF' ||
+                                    // strtoupper($aValues[0]->getHexValue()) ==
+                                    // '#FFF') {
                                     // $back_to_black = true;
                                     $aValues[0]->setColor(
                                             array(
@@ -1429,5 +1436,14 @@ class Navegar extends Service
         </v:roundrect>
         <![endif]-->
         <a href='$linkto' style='background-color:$fill;border:1px solid $stroke;border-radius:3px;color:$text;display:inline-block;font-family:sans-serif;font-size:{$fontsize}px;line-height:{$height}px;text-align:center;text-decoration:none;width:{$width}px;-webkit-text-size-adjust:none;mso-hide:all;'>$caption</a>";
+    }
+
+    function getContrastYIQ ($hexcolor)
+    {
+        $r = hexdec(substr($hexcolor, 0, 2));
+        $g = hexdec(substr($hexcolor, 2, 2));
+        $b = hexdec(substr($hexcolor, 4, 2));
+        $yiq = (($r * 299) + ($g * 587) + ($b * 114)) / 1000;
+        return ($yiq >= 128) ? 'black' : 'white';
     }
 }
