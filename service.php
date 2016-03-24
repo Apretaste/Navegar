@@ -474,6 +474,7 @@ class Navegar extends Service
                 }
                 if (strtolower(substr($href, 0, 7)) == 'mailto:') continue;
                 
+              
                 $link->setAttribute('href', $this->convertToMailTo($href, $url));
             }
         }
@@ -870,7 +871,7 @@ class Navegar extends Service
                 $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
             }
         }
-        
+       
         if (substr($href, 0, 1) == "/") $href = substr($href, 1);
         if (substr($base, - 1, 1) == "/") $base = substr($base, 0, strlen($base) - 1);
         if (substr($base, strlen($base) - strlen($href)) == $href) $href = '';
@@ -910,7 +911,9 @@ class Navegar extends Service
      */
     private function convertToMailTo ($href, $url, $body = '', $ignoreSandbox = false)
     {
-        if ($href[0] != '?') $url = dirname($url);
+        if (trim($href) == '') return '';
+        
+        //if ($href[0] == '?') $url = dirname($url);
         
         // create direct link for the sandbox
         $di = \Phalcon\DI\FactoryDefault::getDefault();
@@ -1347,8 +1350,8 @@ class Navegar extends Service
                         
                         if ($oRule->getRule() == 'width') {
                             if ($aValues[0] instanceof CSSSize) {
-                                if ($aValues[0]->getSize() > 400 && $aValues[0]->getUnit() == 'px') {
-                                    $aValues[0]->setSize(400);
+                                if ($aValues[0]->getSize() > 600 && $aValues[0]->getUnit() == 'px') {
+                                    $aValues[0]->setSize(600);
                                 }
                             }
                         }
@@ -1384,7 +1387,7 @@ class Navegar extends Service
                             }
                         }
                         
-                        if ($oRule->getRule() == 'float') $oRule->setValue('none');
+                        //if ($oRule->getRule() == 'float') $oRule->setValue('none');
                         
                         if ($oRule->getRule() == 'left') {
                             if ($aValues[0] instanceof CSSSize) {

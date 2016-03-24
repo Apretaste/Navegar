@@ -1,7 +1,7 @@
 <service>
 	<serviceName>navegar</serviceName>
 	<serviceDescription><![CDATA[Buscar y navegar en Internet mediante el email]]></serviceDescription>
-	<creatorEmail>kumarajiva2015@gmail.com</creatorEmail>
+	<creatorEmail>kumahavana@gmail.com</creatorEmail>
 	<serviceCategory>comunicaciones</serviceCategory>
 	<serviceUsage>
 		<![CDATA[
