@@ -29,31 +29,7 @@ class Navegar extends Service
      */
     public function _main (Request $request, $agent = 'default')
     {
-        // Save request
-        $this->request = $request;
-        
-        // Load configuration
-        $this->loadServiceConfig();
-        
-        // Get path to the www folder
-        $di = \Phalcon\DI\FactoryDefault::getDefault();
-        $this->wwwroot = $di->get('path')['root'];
-        
-        // Load libs
-        
-        $mod_sockets = extension_loaded('sockets');
-        if (! $mod_sockets && function_exists('dl') && is_callable('dl')) {
-            $prefix = (PHP_SHLIB_SUFFIX == 'dll') ? 'php_' : '';
-            @dl($prefix . 'sockets.' . PHP_SHLIB_SUFFIX);
-            $mod_sockets = extension_loaded('sockets');
-        }
-        
-        require_once $this->pathToService . '/lib/Emogrifier.php';
-        require_once $this->pathToService . '/lib/PemFTP/ftp_class.php';
-        // require_once $this->pathToService . '/lib/PemFTP/ftp_class_' .
-        // ($mod_sockets ? 'sockets' : 'pure') . '.php';
-        require_once $this->pathToService . '/lib/PemFTP/ftp_class_pure.php';
-        require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
+        $this->prepare();
         
         $request->query = trim($request->query);
         
@@ -200,6 +176,40 @@ class Navegar extends Service
     }
 
     /**
+     * Prepare service
+     *
+     * @param Request $request            
+     */
+    private function prepare ($request)
+    {
+        // Save request
+        $this->request = $request;
+        
+        // Load configuration
+        $this->loadServiceConfig();
+        
+        // Get path to the www folder
+        $di = \Phalcon\DI\FactoryDefault::getDefault();
+        $this->wwwroot = $di->get('path')['root'];
+        
+        // Load libs
+        
+        $mod_sockets = extension_loaded('sockets');
+        if (! $mod_sockets && function_exists('dl') && is_callable('dl')) {
+            $prefix = (PHP_SHLIB_SUFFIX == 'dll') ? 'php_' : '';
+            @dl($prefix . 'sockets.' . PHP_SHLIB_SUFFIX);
+            $mod_sockets = extension_loaded('sockets');
+        }
+        
+        require_once $this->pathToService . '/lib/Emogrifier.php';
+        require_once $this->pathToService . '/lib/PemFTP/ftp_class.php';
+        // require_once $this->pathToService . '/lib/PemFTP/ftp_class_' .
+        // ($mod_sockets ? 'sockets' : 'pure') . '.php';
+        require_once $this->pathToService . '/lib/PemFTP/ftp_class_pure.php';
+        require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
+    }
+
+    /**
      * Common functionality for search
      *
      * @param Request $request            
@@ -238,6 +248,7 @@ class Navegar extends Service
      */
     public function _noticias ($request)
     {
+        $this->prepare();
         return $this->searchResponse($request, 'news');
     }
 
@@ -474,7 +485,6 @@ class Navegar extends Service
                 }
                 if (strtolower(substr($href, 0, 7)) == 'mailto:') continue;
                 
-              
                 $link->setAttribute('href', $this->convertToMailTo($href, $url));
             }
         }
@@ -562,6 +572,7 @@ class Navegar extends Service
                     if ($r === false) {
                         // phase 2: trying href with url host
                         $parts = parse_url($url);
+                        
                         $temp_url = $parts['scheme'] . '://' . $parts['host'] . '/';
                         $href = trim($style->getAttribute('href'));
                         if ($href[0] == '/') $href = substr($href, 1);
@@ -871,7 +882,7 @@ class Navegar extends Service
                 $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
             }
         }
-       
+        
         if (substr($href, 0, 1) == "/") $href = substr($href, 1);
         if (substr($base, - 1, 1) == "/") $base = substr($base, 0, strlen($base) - 1);
         if (substr($base, strlen($base) - strlen($href)) == $href) $href = '';
@@ -913,7 +924,7 @@ class Navegar extends Service
     {
         if (trim($href) == '') return '';
         
-        //if ($href[0] == '?') $url = dirname($url);
+        // if ($href[0] == '?') $url = dirname($url);
         
         // create direct link for the sandbox
         $di = \Phalcon\DI\FactoryDefault::getDefault();
@@ -1387,7 +1398,8 @@ class Navegar extends Service
                             }
                         }
                         
-                        //if ($oRule->getRule() == 'float') $oRule->setValue('none');
+                        // if ($oRule->getRule() == 'float')
+                        // $oRule->setValue('none');
                         
                         if ($oRule->getRule() == 'left') {
                             if ($aValues[0] instanceof CSSSize) {
