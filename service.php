@@ -29,7 +29,7 @@ class Navegar extends Service
      */
     public function _main (Request $request, $agent = 'default')
     {
-        $this->prepare();
+        $this->prepare($request);
         
         $request->query = trim($request->query);
         
@@ -248,7 +248,7 @@ class Navegar extends Service
      */
     public function _noticias ($request)
     {
-        $this->prepare();
+        $this->prepare($request);
         return $this->searchResponse($request, 'news');
     }
 
@@ -693,7 +693,7 @@ class Navegar extends Service
             $tags = $doc->getElementsByTagName($tag);
             if ($tags->length > 0) {
                 foreach ($tags as $tag) {
-                    if (trim(strip_tags($tag->nodeValue)) == '') {
+                    if (trim($tag->nodeValue) == '' && $tag->childNodes->length == 0) {
                         $replace[] = array(
                                 'parent' => $tag->parentNode,
                                 'oldnode' => $tag,
@@ -857,6 +857,11 @@ class Navegar extends Service
         $this->saveSearchStat($source, $query);
         
         if (isset($result->results)) if (is_array($result->results)) {
+            foreach ($result->results as $k => $v) {
+                $v->date = date("d/m/Y", $v->date);
+                
+                $result->results[$k] = $v;
+            }
             return $result->results;
         }
         

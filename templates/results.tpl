@@ -2,8 +2,7 @@
 <table>
 {foreach item=item from=$results}
 <tr>
-{link href="NAVEGAR {$item->url}" caption="{$item->title}"}<br/>
-<small>{$item->domain}, <i>{$item->date|date_format:"%A, %B %e, %Y"}</i></small>
+{link href="NAVEGAR {$item->url}" caption="{$item->title}"} - <small><i>{$item->date}</i></small><br/>
 <p align="justify"> 
 	{$item->kwic}</p>
 {/foreach}
