@@ -2,9 +2,11 @@
 La p&aacute;gina que se te muestra tiene un tama&ntilde;o aproximado de <b>{$body_length}Kb</b>.
 </p>
 <h1>{$title}</h1>
-<fieldset style="min-width:450px;overflow:auto;">
+<fieldset style="{$style}">
 {$body}
 </fieldset>
+
+
 <hr/>
 {if !empty($resources) }
 	<h2>Recursos de la p&aacute;gina</h2>

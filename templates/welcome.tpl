@@ -57,6 +57,7 @@ Esto es &uacute;til para obtener p&aacute;ginas en formato reducido, t&iacute;pi
 ser de tu inter&eacute;s:</p>
 <ul>
 	<li>{link href="NAVEGAR http://carlostercero.ca/" caption ="carlostercero.ca - Tienda Carlos III"}</li>
+	<li>{link href="NAVEGAR http://lyrics.com/" caption ="lyrics.com - Letras de m&uacute;sica"}</li>
 	<li>{link href="NAVEGAR http://revolico.com/" caption ="revolico.com - Revolico"}</li>
 	<li>{link href="NAVEGAR http://wikia.com" caption ="wikia.com - Enciclopedias"}</li>
 	<li>{link href="NAVEGAR http://es.wikipedia.org/" caption ="Wikipedia, la enciclopedia libre"}</li>

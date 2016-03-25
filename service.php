@@ -459,6 +459,7 @@ class Navegar extends Service
         ), 'utf8');
         
         $doc = new DOMDocument();
+        
         @$doc->loadHTML($body);
         
         // Get the page's title
@@ -618,9 +619,85 @@ class Navegar extends Service
         // Set style to each element in DOM, based on CSS stylesheets
         // $css = $this->fixStyle($css);
         $emo = new Pelago\Emogrifier($body, $css);
-        $body = $emo->emogrify();
+        $emo->disableInvisibleNodeRemoval();
+        // $emo->enableCssToHtmlMapping();
+        
+        try {
+            $body = $emo->emogrify();
+        } catch (Exception $e) {}
         
         @$doc->loadHTML($body);
+        
+        $nodeBody = $doc->getElementsByTagName('body');
+        
+        $styleBody = @$nodeBody[0]->getAttribute('style');
+        $styleBody = $this->fixStyle($styleBody);
+        $styleBody = str_replace('"', "'", $styleBody);
+        
+        $tags_to_fix = explode(' ', 'a p label div pre h1 h2 h3 h4 h5 button i b u li ol ul fieldset small legend form input span button nav table tr th td thead');
+        
+        foreach ($tags_to_fix as $tagname) {
+            if (array_search($tagname, array(
+                    'input'
+            )) !== false) continue;
+            
+            $tags = $doc->getElementsByTagName($tagname);
+            if ($tags->length > 0) {
+                foreach ($tags as $tag) {
+                    if (trim($tag->nodeValue) == '' && $tag->childNodes->length == 0) {
+                        $replace[] = array(
+                                'parent' => $tag->parentNode,
+                                'oldnode' => $tag,
+                                'newnode' => null
+                        );
+                    }
+                }
+            }
+        }
+        // Fixing PRE
+        
+        $pres = $doc->getElementsByTagName('pre');
+        
+        if ($pres->length > 0) {
+            foreach ($pres as $pre) {
+                $lines = split('\n', $pre->nodeValue);
+                
+                $newpre = $doc->createElement('div');
+                foreach ($lines as $line) {
+                    $line = str_replace(' ', '&nbsp;', $line);
+                    $newp = $doc->createElement('p', $line);
+                    $newp->setAttribute('style', 'line-height:13px;');
+                    $newpre->appendChild($newp);
+                }
+                
+                $newpre->setAttribute('style', $pre->getAttribute('style') . ';font-size: 13px;font-family:Courier;');
+                $replace[] = array(
+                        'parent' => $pre->parentNode,
+                        'oldnode' => $pre,
+                        'newnode' => $newpre
+                );
+            }
+        }
+        
+        // Fixing styles
+        
+        foreach ($tags_to_fix as $tag) {
+            
+            $links = $doc->getElementsByTagName($tag);
+            
+            if ($links->length > 0) {
+                foreach ($links as $link) {
+                    $sty = $link->getAttribute('style');
+                    $sty = $this->fixStyle('a{' . $sty . '}');
+                    if (strpos($sty, 'a{') !== false) {
+                        $sty = substr($sty, 3);
+                        $sty = substr($sty, 0, strlen($sty) - 1);
+                    }
+                    $link->setAttribute('style', $sty);
+                    $link->setAttribute('class', '');
+                }
+            }
+        }
         
         // Convert image tags to NAVEGAR links
         
@@ -686,24 +763,6 @@ class Navegar extends Service
             }
         }
         
-        $tags_to_fix = explode(' ', 'a p label div pre h1 h2 h3 h4 h5 button i b u li ol');
-        
-        foreach ($tags_to_fix as $tag) {
-            
-            $tags = $doc->getElementsByTagName($tag);
-            if ($tags->length > 0) {
-                foreach ($tags as $tag) {
-                    if (trim($tag->nodeValue) == '' && $tag->childNodes->length == 0) {
-                        $replace[] = array(
-                                'parent' => $tag->parentNode,
-                                'oldnode' => $tag,
-                                'newnode' => null
-                        );
-                    }
-                }
-            }
-        }
-        
         // Replace/remove childs [again]
         
         foreach ($replace as $rep) {
@@ -717,22 +776,6 @@ class Navegar extends Service
             }
         }
         
-        // Fixing styles
-        
-        foreach ($tags_to_fix as $tag) {
-            
-            $links = $doc->getElementsByTagName($tag);
-            
-            if ($links->length > 0) {
-                foreach ($links as $link) {
-                    $sty = $link->getAttribute('style');
-                    $sty = $this->fixStyle('a{' . $sty . '}');
-                    $sty = substr($sty, 3);
-                    $sty = substr($sty, 0, strlen($sty) - 1);
-                    $link->setAttribute('style', $sty);
-                }
-            }
-        }
         $body = $doc->saveHTML();
         
         // Get only the body
@@ -742,19 +785,26 @@ class Navegar extends Service
         ), 'utf8');
         
         // Cleanning the text to look better in the email
-        $body = str_replace("<br>", "<br>\n", $body);
-        $body = str_replace("<br/>", "<br/>\n", $body);
-        $body = str_replace("</p>", "</p>\n", $body);
-        $body = str_replace("</h2>", "</h2>\n", $body);
-        $body = str_replace("</span>", "</span>\n", $body);
-        $body = str_replace("/>", "/>\n", $body);
-        $body = str_replace("<p", "<p style=\"text-align:justify;\" align=\"justify\"", $body);
-        $body = wordwrap($body, 200, "\n");
+        /*
+         * $body = str_ireplace("<br>", "<br>\n", $body);
+         * $body = str_ireplace("<br/>", "<br/>\n", $body);
+         * $body = str_ireplace("</p>", "</p>\n", $body);
+         * $body = str_ireplace("</h1>", "</h1>\n", $body);
+         * $body = str_ireplace("</h2>", "</h2>\n", $body);
+         * $body = str_ireplace("</span>", "</span>\n", $body);
+         * $body = str_ireplace("/>", "/>\n", $body);
+         * $body = wordwrap($body, 200, "\n");
+         */
+        $body = str_ireplace('class=""', '', $body);
+        $body = str_ireplace('style=""', '', $body);
         
         // strip unnecessary, dangerous tags
-        $body = strip_tags($body, 
-                '<input><button><a><abbr><acronym><address><area><article><aside><audio><b><base><basefont><bdi><bdo><big><blockquote><br><canvas><caption><center><cite><code><col><colgroup><command><datalist><dd><del><details><dfn><dialog><dir><div><dl><dt><em><embed><fieldset><figcaption><figure><font><footer><form><frame><frameset><head><header><h1> - <h6><hr><i><ins><kbd><keygen><label><legend><li><link><map><mark><menu><meta><meter><nav><noframes><noscript><object><ol><optgroup><option><output><p><param><pre><progress><q><rp><rt><ruby><s><samp><section><select><small><source><span><strike><strong><style><sub><summary><sup><table><tbody><td><textarea><tfoot><th><thead><time><title><tr><track><tt><u><ul><var><video><wbr><h2><h3>');
-        
+        /*
+         * $body = strip_tags($body,
+         * '<input><button><a><abbr><acronym><address><area><article><aside><audio><b><base><basefont><bdi><bdo><big><blockquote><br><canvas><caption><center><cite><code><col><colgroup><command><datalist><dd><del><details><dfn><dialog><dir><div><dl><dt><em><embed><fieldset><figcaption><figure><font><footer><form><frame><frameset><head><header><h1>
+         * -
+         * <h6><hr><i><ins><kbd><keygen><label><legend><li><link><map><mark><menu><meta><meter><nav><noframes><noscript><object><ol><optgroup><option><output><p><param><pre><progress><q><rp><rt><ruby><s><samp><section><select><small><source><span><strike><strong><style><sub><summary><sup><table><tbody><td><textarea><tfoot><th><thead><time><title><tr><track><tt><u><ul><var><video><wbr><h2><h3>');
+         */
         // Compress the returning code
         $body = preg_replace('/\s+/S', " ", $body);
         
@@ -767,6 +817,7 @@ class Navegar extends Service
         return array(
                 'title' => $title,
                 'body' => $body,
+                'style' => $styleBody,
                 'body_length' => number_format($body_length / 1024, 2),
                 'url' => $url,
                 'resources' => $resources
@@ -875,6 +926,8 @@ class Navegar extends Service
     {
         $base = '';
         
+        if ($href == 'javascript(0);') return '';
+        
         if (strtolower(substr($href, 0, 2) == '//')) return 'http:' . $href;
         
         if (! $this->isHttpURL($href)) {
@@ -884,7 +937,11 @@ class Navegar extends Service
                 if (! $this->isHttpURL($url)) $url = 'http://' . $url;
                 $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/";
             } else {
-                $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
+                if (substr($href, 0, 1) == '?') {
+                    $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
+                } else {
+                    $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/" . dirname(parse_url($url, PHP_URL_PATH));
+                }
             }
         }
         
@@ -1309,132 +1366,210 @@ class Navegar extends Service
                             'output_encoding' => 'UTF-8'
                     ));
             
+            $valid_rules = array(
+                    'color',
+                    'background',
+                    'background-color',
+                    'text-align',
+                    'text-decoration',
+                    'font',
+                    'font-weight',
+                    'font-family',
+                    'font-size',
+                    'float',
+                    'list-style',
+                    'margin',
+                    'margin-top',
+                    'margin-left',
+                    'margin-right',
+                    'margin-bottom',
+                    'padding',
+                    'padding-top',
+                    'padding-left',
+                    'padding-right',
+                    'padding-bottom',
+                    'border',
+                    'border-width',
+                    'border-color',
+                    'border-radius',
+                    'line-height',
+                    'display',
+                    'width',
+                    // 'height',
+                    '-webkit-text-size-adjust',
+                    'mso-hide',
+                    // 'position',
+                    // 'white-space',
+                    'list-style-type',
+                    'font-style'
+            );
+            
             $oDoc = $parser->parseString($style);
             $contrast = 'white';
+            
+            $new_style = '';
+            
             foreach ($oDoc->getAllDeclarationBlocks() as $oDeclaration) {
                 $back_to_black = false;
+                
+                // fixing contrast
+                $color = false;
+                $background = false;
+                
                 foreach ($oDeclaration->getRules() as $oRule) {
+                    $rn = $oRule->getRule();
                     foreach ($oRule->getValues() as $aValues) {
                         
-                        if ($oRule->getRule() == 'color') {
-                            
-                            if ($aValues[0] instanceof CSSColor) {
-                                $aValues[0]->toRGB();
-                                $contrast = $this->getContrastYIQ(strtoupper($aValues[0]->getHexValue()));
-                                $hexcolor = substr($aValues[0]->getHexValue(), 1);
-                                if ((hexdec($hexcolor) > 0xffffff / 2)) {
-                                    // if
-                                    // (strtoupper($aValues[0]->getHexValue())
-                                    // == '#FFFFFF' ||
-                                    // strtoupper($aValues[0]->getHexValue()) ==
-                                    // '#FFF') {
-                                    // $back_to_black = true;
-                                    $aValues[0]->setColor(
-                                            array(
-                                                    'r' => 0,
-                                                    'g' => 0,
-                                                    'b' => 255
-                                            ));
-                                } /*
-                                   * else {
-                                   * $aValues[0]->setColor(
-                                   * array(
-                                   * 'r' => 0,
-                                   * 'g' => 0,
-                                   * 'b' => 255
-                                   * ));
-                                   * }
-                                   */
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'background-color' || $oRule->getRule() == 'background') {
-                            if ($back_to_black) {
+                        switch ($rn) {
+                            case 'color':
                                 if ($aValues[0] instanceof CSSColor) {
-                                    
-                                    $aValues[0]->toRGB();
-                                    $aValues[0]->setColor(
-                                            array(
-                                                    'r' => 0,
-                                                    'g' => 0,
-                                                    'b' => 0
-                                            ));
-                                    $back_to_black = false;
+                                    $color = $aValues[0];
                                 }
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'width') {
-                            if ($aValues[0] instanceof CSSSize) {
-                                if ($aValues[0]->getSize() > 600 && $aValues[0]->getUnit() == 'px') {
-                                    $aValues[0]->setSize(600);
+                                break;
+                            case 'background-color':
+                            case 'background':
+                            case 'background-image':
+                                foreach ($aValues as $k => $v) {
+                                    if ($aValues[$k] instanceof CSSColor) {
+                                        $background = $aValues[$k];
+                                        break;
+                                    }
                                 }
-                            }
+                                
+                                break;
                         }
-                        
-                        if ($oRule->getRule() == 'height') {
-                            if ($aValues[0] instanceof CSSSize) {
-                                if ($aValues[0]->getUnit() == '%') $aValues[0]->setSize(400);
-                                if ($aValues[0]->getSize() > 400 && $aValues[0]->getUnit() == 'px') {
-                                    $aValues[0]->setSize(400);
-                                }
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'position') {
-                            $oRule->setValue('inherit');
-                        }
-                        
-                        if ($oRule->getRule() == 'display') {
-                            if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
-                                $oRule->setValue('block');
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'visibility') {
-                            if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
-                                $oRule->setValue('inherit');
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'opacity') {
-                            if ($aValues[0] instanceof CSSSize) {
-                                $aValues[0]->setSize(100);
-                            }
-                        }
-                        
-                        // if ($oRule->getRule() == 'float')
-                        // $oRule->setValue('none');
-                        
-                        if ($oRule->getRule() == 'left') {
-                            if ($aValues[0] instanceof CSSSize) {
-                                $s = $aValues[0]->getSize();
-                                if ($aValues[0]->isRelative()) {
-                                    $aValues[0]->setSize(0);
-                                    $aValues[0]->setUnit('px');
-                                }
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'margin-left') {
-                            if ($aValues[0] instanceof CSSSize) {
-                                if ($aValues[0]->getSize() < 0) $aValues[0]->setSize(0);
-                            }
-                        }
-                        
-                        if ($oRule->getRule() == 'right') $oRule->setValue('0px');
-                        if ($oRule->getRule() == 'top') $oRule->setValue('0px');
                     }
                 }
                 
-                if ($back_to_black) {
-                    $rule = new CSSRule('background');
-                    $rule->setValue('navy');
-                    $oDeclaration->addRule($rule);
+                // set default contrast as white & black
+                if ($background !== false && $color !== false) {
+                    // calculate as decimal
+                    $color_dec = hexdec(substr($color->getHexValue(), 1));
+                    $back_dec = hexdec(substr($background->getHexValue(), 1));
+                    
+                    // calculate the difference
+                    if (abs($color_dec - $back_dec) <= 255) {
+                        
+                        // get the best contrast
+                        $contrast = $this->getContrastYIQ(substr($color->getHexValue(), 1));
+                        
+                        $background->toRGB();
+                        switch ($contrast) {
+                            case 'white':
+                                $ss = new CSSSize(255);
+                                break;
+                            case 'black':
+                                $ss = new CSSSize(0);
+                                break;
+                        }
+                        
+                        $background->setColor(array(
+                                'r' => $ss,
+                                'g' => $ss,
+                                'b' => $ss
+                        ));
+                        
+                        // adding new rule
+                        /*
+                         * $rule = new CSSRule('background-color');
+                         * $rule->addValue($background);
+                         *
+                         * $oDeclaration->addRule($rule);
+                         */
+                    }
                 }
+                // fixing other rules
+                foreach ($oDeclaration->getRules() as $oRule) {
+                    $ignore_rule = false;
+                    $rn = $oRule->getRule();
+                    
+                    if (array_search($rn, $valid_rules) === false) continue;
+                    
+                    foreach ($oRule->getValues() as $aValues) {
+                        switch ($rn) {
+                            case 'width':
+                                if ($aValues[0] instanceof CSSSize) {
+                                    if ($aValues[0]->isRelative()) {
+                                        $ignore_rule = true;
+                                    } else 
+                                        if ($aValues[0]->getSize() > 600) {
+                                            $aValues[0]->setSize(600);
+                                        }
+                                }
+                                break;
+                            case 'height':
+                                if ($aValues[0] instanceof CSSSize) {
+                                    if ($aValues[0]->isRelative()) {
+                                        $ignore_rule = true;
+                                    } else 
+                                        if ($aValues[0]->getSize() > 100) {
+                                            $ignore_rule = true;
+                                            // $aValues[0]->setSize(400);
+                                        }
+                                }
+                                break;
+                            case 'position':
+                                $oRule->setValue('inherit');
+                                break;
+                            case 'display':
+                                if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
+                                    $oRule->setValue('block');
+                                }
+                                break;
+                            case 'visibility':
+                                if ($aValues[0] == 'none' || $aValues[0] == 'hidden') {
+                                    $oRule->setValue('inherit');
+                                }
+                                break;
+                            case 'opacity':
+                                
+                                if ($aValues[0] instanceof CSSSize) {
+                                    $aValues[0]->setSize(100);
+                                }
+                                break;
+                            case 'left':
+                                if ($aValues[0] instanceof CSSSize) {
+                                    $s = $aValues[0]->getSize();
+                                    if ($aValues[0]->isRelative()) {
+                                        $aValues[0]->setSize(0);
+                                        $aValues[0]->setUnit('px');
+                                    }
+                                }
+                                break;
+                            
+                            case 'margin-left':
+                            case 'margin-top':
+                            case 'margin-bottom':
+                            case 'margin-right':
+                                if ($aValues[0] instanceof CSSSize) {
+                                    if ($aValues[0]->isRelative()) {
+                                        $ignore_rule = true;
+                                    } else 
+                                        if ($aValues[0]->getSize() < 0) $aValues[0]->setSize(5);
+                                }
+                                break;
+                            case 'float':
+                                if ($aValues[0] == 'right') $ignore_rule = true;
+                                break;
+                        }
+                    }
+                    if (! $ignore_rule) {
+                        $new_style .= "$oRule";
+                    }
+                }
+                
+                /*
+                 * if ($back_to_black) {
+                 * $rule = new CSSRule('background');
+                 * $rule->setValue('navy');
+                 * $oDeclaration->addRule($rule);
+                 * }
+                 */
             }
             
-            return $oDoc->__toString();
+            // return $oDoc->__toString();
+            // die("$new_style");
+            return $new_style;
         } catch (Exception $e) {
             // die($e->getMessage());
             return $style;
