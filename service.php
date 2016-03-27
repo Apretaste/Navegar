@@ -21,6 +21,8 @@ class Navegar extends Service
 
     private $wwwroot = null;
 
+    private $base = null;
+
     /**
      * Function executed when the service is called
      *
@@ -462,6 +464,10 @@ class Navegar extends Service
         
         @$doc->loadHTML($body);
         
+        // Getting BASE of URLs (base tag)
+        $base = $doc->getElementsByTagName('base');
+        if ($base->length > 0) $this->base = $base->item(0)->href;
+        
         // Get the page's title
         
         $title = $doc->getElementsByTagName('title');
@@ -492,6 +498,7 @@ class Navegar extends Service
         
         // Array for store replacements of DOM's nodes
         $replace = array();
+        $in_the_end = array();
         
         // Parsing forms
         
@@ -730,15 +737,34 @@ class Navegar extends Service
                         '-'
                 ), '_', $imgname);
                 
-                $node = $doc->createElement('a', "IMAGEN");
-                $node->setAttribute('style', (! is_null($style) ? $style : "") . $style_navegar_links . (! is_null($width) ? ";width:{$width}px;" : "") . (is_null($height) ? "height:{$height}px;" : ""));
+                $id = uniqid();
+                
+                $node = $doc->createElement('a', '{' . $id . '}');
+                // $node->setAttribute('style', (! is_null($style) ? $style :
+                // "") . $style_navegar_links . (! is_null($width) ?
+                // ";width:{$width}px;" : "") . (is_null($height) ?
+                // "height:{$height}px;" : ""));
                 $node->setAttribute('href', $this->convertToMailTo($src, $url));
+                $img_w = $node->getAttribute('width');
+                $img_h = $node->getAttribute('height');
+                
+                if (empty($img_w)) $img_w = 100;
+                if (empty($img_h)) $img_h = 100;
+                
+                $img_style = $node->getAttribute('style');
+                $node->setAttribute('style', $img_style);
                 
                 $replace[] = array(
                         'parent' => $image->parentNode,
                         'oldnode' => $image,
                         'newnode' => $node
                 );
+                
+                $in_the_end[$id] = $this->getHTMLOfNoImage(array(
+                        'width' => $img_w,
+                        'height' => $img_h,
+                        'text' => 'IMAGEN'
+                ));
             }
         }
         
@@ -813,6 +839,10 @@ class Navegar extends Service
         $body_length = strlen($body);
         if ($body_length > $limit) $body = substr($body, 0, $limit);
         
+        foreach ($in_the_end as $id => $code) {
+            $body = str_replace('{' . $id . '}', $code, $body);
+        }
+        
         // Return results
         return array(
                 'title' => $title,
@@ -822,6 +852,24 @@ class Navegar extends Service
                 'url' => $url,
                 'resources' => $resources
         );
+    }
+
+    private function getHTMLOfNoImage ($params)
+    {
+        $width = isset($params["width"]) ? $params["width"] : "100";
+        $height = isset($params["height"]) ? $params["height"] : "100";
+        $text = isset($params["text"]) ? strtoupper($params["text"]) : "NO FOTO";
+        
+        return "
+		<table>
+			<tr>
+				<td width='$width' height='$height' bgcolor='#F2F2F2' align='center' valign='middle'>
+					<div style='width:{$width}px; color:gray;'>
+						<small>$text</small>
+					</div>
+				</td>
+			</tr>
+		</table>";
     }
 
     private function saveCookies ($email, $host, $jar)
@@ -920,35 +968,107 @@ class Navegar extends Service
     }
 
     /**
+     * Check if URL exists
+     *
+     * @param string $url            
+     * @return boolean
+     */
+    private function urlExists ($url)
+    {
+        $headers = @get_headers($url, 1);
+        if ($headers === false) return false;
+        if (isset($headers[0])) {
+            if (stripos($headers[0], '200 OK') !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Return full HREF
      */
     private function getFullHref ($href, $url)
     {
-        $base = '';
-        
-        if ($href == 'javascript(0);') return '';
-        
+        $href = trim($href);
+        if ($href == '' || $href == 'javascript(0);') return $url;
         if (strtolower(substr($href, 0, 2) == '//')) return 'http:' . $href;
-        
-        if (! $this->isHttpURL($href)) {
-            $port = parse_url($url, PHP_URL_PORT);
-            $port = ($port == '' ? "" : ":$port");
-            if (substr($href, 0, 1) == '/') {
-                if (! $this->isHttpURL($url)) $url = 'http://' . $url;
-                $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/";
-            } else {
-                if (substr($href, 0, 1) == '?') {
-                    $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url, PHP_URL_PATH));
-                } else {
-                    $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url, PHP_URL_HOST) . $port . "/" . dirname(parse_url($url, PHP_URL_PATH));
-                }
-            }
+        if (strtolower(substr($href, 0, 1) == '?')) {
+            if (! is_null($this->base)) return $this->base . $href;
+            return $url . $href;
         }
         
-        if (substr($href, 0, 1) == "/") $href = substr($href, 1);
-        if (substr($base, - 1, 1) == "/") $base = substr($base, 0, strlen($base) - 1);
-        if (substr($base, strlen($base) - strlen($href)) == $href) $href = '';
-        return (empty($base) ? $href : $base . (empty($href) ? '' : "/" . $href));
+        $base = '';
+        
+        if ($this->isHttpURL($href) || $this->isHttpURL($href)) return $href;
+        
+        if (! $this->isHttpURL($url) && ! $this->isFtpURL($url)) $url = 'http://' . $url;
+        $url = trim($url);
+        if (substr($url, strlen($url) - 1, 1) == "/") $url = substr($url, 0, strlen($url) - 1);
+        
+        /*
+         * $variants = array();
+         *
+         * $variants[] = $href;
+         */
+        $parts = parse_url($url);
+        if (! isset($parts['port'])) $parts['port'] = 80;
+        $base = $parts['scheme'] . "://" . $parts['host'] . ":" . $parts['port'] . "/";
+        
+        if (! is_null($this->base)) $base = $this->base;
+        
+        return $base . $href;
+        /*
+         * $path = $parts['path'];
+         * if (substr($path, 0, 1) == '/') $path = substr($path, 1);
+         * $path_parts = explode("/", $path);
+         *
+         * $ppart = '';
+         * foreach ($path_parts as $path_part) {
+         * $ppart .= $path_part . "/";
+         * $variants[] = $base . $ppart . $href;
+         * }
+         *
+         * $variants[] = $url . "/" . $href;
+         *
+         * foreach ($variants as $variant) {
+         * // echo "test $variant\n";
+         * if ($this->urlExists($variant)) return $variant;
+         * }
+         *
+         * return '';
+         */
+        //
+        /*
+         * if (strtolower(substr($href, 0, 2) == '//')) return 'http:' . $href;
+         *
+         * if (! isHttpURL($href)) {
+         * $port = parse_url($url, PHP_URL_PORT);
+         * $port = ($port == '' ? "" : ":$port");
+         * if (substr($href, 0, 1) == '/') {
+         *
+         * $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url,
+         * PHP_URL_HOST) . $port . "/";
+         * } else {
+         * if (substr($href, 0, 1) == '?') {
+         * $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url,
+         * PHP_URL_HOST) . $port . str_replace("//", "/", "/" . parse_url($url,
+         * PHP_URL_PATH));
+         * } else {
+         * $base = parse_url($url, PHP_URL_SCHEME) . "://" . parse_url($url,
+         * PHP_URL_HOST) . $port . "/" . dirname(parse_url($url, PHP_URL_PATH));
+         * }
+         * }
+         * }
+         *
+         * if (substr($href, 0, 1) == "/") $href = substr($href, 1);
+         * if (substr($base, - 1, 1) == "/") $base = substr($base, 0,
+         * strlen($base) - 1);
+         * if (substr($base, strlen($base) - strlen($href)) == $href) $href =
+         * '';
+         * return (empty($base) ? $href : $base . (empty($href) ? '' : "/" .
+         * $href));
+         */
     }
 
     /**
@@ -961,6 +1081,18 @@ class Navegar extends Service
     {
         $url = trim(strtolower($url));
         return strtolower(substr($url, 0, 7)) === 'http://' || strtolower(substr($url, 0, 8)) === 'https://';
+    }
+
+    /**
+     * Return TRUE if url is a FTP
+     *
+     * @param string $url            
+     * @return boolean
+     */
+    private function isFtpURL ($url)
+    {
+        $url = trim(strtolower($url));
+        return strtolower(substr($url, 0, 6)) === 'ftp://';
     }
 
     /**
@@ -991,12 +1123,13 @@ class Navegar extends Service
         // create direct link for the sandbox
         $di = \Phalcon\DI\FactoryDefault::getDefault();
         
+        $fullhref = $this->getFullHref($href, $url);
         if ($di->get('environment') == "sandbox" && ! $ignoreSandbox) {
             $wwwhttp = $di->get('path')['http'];
-            return "$wwwhttp/run/display?subject=NAVEGAR " . $this->getFullHref($href, $url) . ($body == '' ? '' : "&amp;body=$body");
+            return "$wwwhttp/run/display?subject=NAVEGAR " . $fullhref . ($body == '' ? '' : "&amp;body=$body");
         } else {
             
-            $newhref = 'mailto:' . $this->getMailTo() . '?subject=NAVEGAR ' . $this->getFullHref($href, $url);
+            $newhref = 'mailto:' . $this->getMailTo() . '?subject=NAVEGAR ' . $fullhref;
             $newhref = str_replace("//", "/", $newhref);
             $newhref = str_replace("//", "/", $newhref);
             $newhref = str_replace("//", "/", $newhref);
