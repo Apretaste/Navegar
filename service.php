@@ -356,7 +356,7 @@ class Navegar extends Service
                 file_put_contents($filePath, $http_response->getBody());
                 
                 // optimize the image
-                $this->utils->optimizeImage($filePath, 400);
+                $this->utils->optimizeImage($filePath);
                 
                 // save the image in the array for the template
                 $images = array(
@@ -1459,8 +1459,9 @@ class Navegar extends Service
                 );
                 
                 if (isset($rss->channel->title)) $result['title'] = $rss->channel->title . '';
-                
-                if (isset($rss->channel->item)) if (is_array($rss->channel->item)) foreach ($rss->channel->item as $item) {
+              
+                if (isset($rss->channel->item)) foreach ($rss->channel->item as $item) {
+               
                     $data = array(
                             'link' => '',
                             'title' => '',
@@ -1476,6 +1477,7 @@ class Navegar extends Service
                     $result['items'][] = $data;
                 }
                 
+              
                 return $result;
             }
         return false;
