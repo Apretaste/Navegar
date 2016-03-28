@@ -466,7 +466,7 @@ class Navegar extends Service
         
         // Getting BASE of URLs (base tag)
         $base = $doc->getElementsByTagName('base');
-        if ($base->length > 0) $this->base = $base->item(0)->href;
+        if ($base->length > 0) $this->base = $base->item(0)->getAttribute('href');
         
         // Get the page's title
         
@@ -1709,6 +1709,12 @@ class Navegar extends Service
         }
     }
 
+    /**
+     * Build
+     * @param unknown $linkto
+     * @param unknown $caption
+     * @return string
+     */
     private function buildButton ($linkto, $caption)
     {
         $width = 150;
