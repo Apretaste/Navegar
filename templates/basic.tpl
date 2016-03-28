@@ -5,14 +5,3 @@ La p&aacute;gina que se te muestra tiene un tama&ntilde;o aproximado de <b>{$bod
 <fieldset style="{$style}">
 {$body}
 </fieldset>
-
-
-<hr/>
-{if !empty($resources) }
-	<h2>Recursos de la p&aacute;gina</h2>
-	<ul>
-	{foreach item=item from=$resources}
-		<li>{link href="NAVEGAR {$item}" caption="{$item|truncate:100:"...":true}"}</li>
-	{/foreach}
-	</ul>
-{/if}
