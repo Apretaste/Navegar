@@ -172,7 +172,7 @@ class Navegar extends Service
         
         $response = new Response();
         $response->setResponseSubject(empty($responseContent['title']) ? "Navegando con Apretaste" : $responseContent['title']);
-        $response->createFromTemplate("{$responseContent['type']}.tpl", $responseContent, (isset($responseContent['images']) ? $responseContent['images'] : array()));
+        $response->createFromTemplate("{$responseContent['type']}.tpl", $responseContent, (isset($responseContent['images']) ? $responseContent['images'] : array()), (isset($responseContent['attachments']) ? $responseContent['attachments'] : array()));
         
         return $response;
     }
