@@ -172,7 +172,7 @@ class Navegar extends Service
         
         $response = new Response();
         $response->setResponseSubject(empty($responseContent['title']) ? "Navegando con Apretaste" : $responseContent['title']);
-        $response->createFromTemplate("{$responseContent['type']}.tpl", $responseContent);
+        $response->createFromTemplate("{$responseContent['type']}.tpl", $responseContent, (isset($responseContent['images']) ? $responseContent['images'] : array()));
         
         return $response;
     }
@@ -1459,9 +1459,9 @@ class Navegar extends Service
                 );
                 
                 if (isset($rss->channel->title)) $result['title'] = $rss->channel->title . '';
-              
+                
                 if (isset($rss->channel->item)) foreach ($rss->channel->item as $item) {
-               
+                    
                     $data = array(
                             'link' => '',
                             'title' => '',
@@ -1477,7 +1477,6 @@ class Navegar extends Service
                     $result['items'][] = $data;
                 }
                 
-              
                 return $result;
             }
         return false;
@@ -1713,8 +1712,9 @@ class Navegar extends Service
 
     /**
      * Build
-     * @param unknown $linkto
-     * @param unknown $caption
+     * 
+     * @param unknown $linkto            
+     * @param unknown $caption            
      * @return string
      */
     private function buildButton ($linkto, $caption)
