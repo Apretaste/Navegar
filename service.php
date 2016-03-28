@@ -352,7 +352,7 @@ class Navegar extends Service
             // show image
             if (substr($ct, 0, 6) == 'image/') {
                 // save image file
-                $filePath = $this->getTempDir() . "/files/image-" . md5($url);
+                $filePath = $this->getTempDir() . "/files/image-" . md5($url) . ".jpg";
                 file_put_contents($filePath, $http_response->getBody());
                 
                 // optimize the image
@@ -1712,7 +1712,7 @@ class Navegar extends Service
 
     /**
      * Build
-     * 
+     *
      * @param unknown $linkto            
      * @param unknown $caption            
      * @return string
