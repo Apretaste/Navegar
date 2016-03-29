@@ -153,7 +153,7 @@ class Navegar extends Service
         if ($page === false) {
             // Return invalid page
             $response = new Response();
-            $response->setResponseSubject("No se puedo acceder");
+            $response->setResponseSubject("No se pudo acceder");
             $response->createFromTemplate('http_error.tpl', array(
                     'url' => $url
             ));
