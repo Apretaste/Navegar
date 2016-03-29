@@ -580,12 +580,17 @@ class Navegar extends Service
                     if ($r === false) {
                         // phase 2: trying href with url host
                         $parts = parse_url($url);
-                        
-                        $temp_url = $parts['scheme'] . '://' . $parts['host'] . '/';
-                        $href = trim($style->getAttribute('href'));
-                        if ($href[0] == '/') $href = substr($href, 1);
-                        $r = @file_get_contents($temp_url . '/' . $href);
-                        
+                        if ($parts !== false) {
+                            if (isset($parts['scheme']) && isset($parts['host']))
+                                $temp_url = $parts['scheme'] . '://' . $parts['host'] . '/';
+                            else
+                                $temp_url = $url;
+                            
+                            $href = trim($style->getAttribute('href'));
+                            if ($href[0] == '/') $href = substr($href, 1);
+                            $r = @file_get_contents($temp_url . '/' . $href);
+                        }
+                        $r = false;
                         if ($r == false) {
                             // phase 3: trying href with url host and each part
                             // of url path
@@ -638,7 +643,7 @@ class Navegar extends Service
         $nodeBody = $doc->getElementsByTagName('body');
         
         $styleBody = @$nodeBody[0]->getAttribute('style');
-        $styleBody = $this->fixStyle($styleBody);
+        //$styleBody = $this->fixStyle($styleBody);
         $styleBody = str_replace('"', "'", $styleBody);
         
         $tags_to_fix = explode(' ', 'a p label div pre h1 h2 h3 h4 h5 button i b u li ol ul fieldset small legend form input span button nav table tr th td thead');
@@ -695,7 +700,7 @@ class Navegar extends Service
             if ($links->length > 0) {
                 foreach ($links as $link) {
                     $sty = $link->getAttribute('style');
-                    $sty = $this->fixStyle('a{' . $sty . '}');
+                    //$sty = $this->fixStyle('a{' . $sty . '}');
                     if (strpos($sty, 'a{') !== false) {
                         $sty = substr($sty, 3);
                         $sty = substr($sty, 0, strlen($sty) - 1);
@@ -1490,6 +1495,19 @@ class Navegar extends Service
      */
     public function fixStyle ($style)
     {
+        $rules = array();
+        $parts = explode(';', $style);
+        foreach ($parts as $part) {
+            if (trim($part) == '') continue;
+            $p = strpos($part, ":");
+            if ($p === false) continue;
+            $prop = strtolower(trim(substr($part, 0, $p)));
+            if (trim($prop) == '') continue;
+            $rules[$prop] = trim(substr($part, $p + 1));
+        }
+        
+        return $style;
+        
         try {
             $parser = new CSSParser(
                     array(
