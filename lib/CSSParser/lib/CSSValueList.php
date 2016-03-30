@@ -219,18 +219,21 @@ class CSSColor extends CSSFunction {
     if(isset($aComponents['a']) && $aComponents['a']->getSize() !== 1) return null;
     $sName = $this->getName();
     if($sName == 'rgb') {
-      return CSSColorUtils::rgb2hex(
-        $aComponents['r']->getSize(),
-        $aComponents['g']->getSize(),
-        $aComponents['b']->getSize()
-      );
+        if (isset($aComponents['r']) && isset($aComponents['g']) && isset($aComponents['b']))
+          return CSSColorUtils::rgb2hex(
+            $aComponents['r']->getSize(),
+            $aComponents['g']->getSize(),
+            $aComponents['b']->getSize()
+          );
     }
     else if($sName == 'hsl') {
-      return CSSColorUtils::hsl2hex(
-        $aComponents['h']->getSize(),
-        $aComponents['s']->getSize(),
-        $aComponents['l']->getSize()
-      );
+        if (isset($aComponents['h']) && isset($aComponents['s']) && isset($aComponents['l']))
+          return CSSColorUtils::hsl2hex(
+            $aComponents['h']->getSize(),
+            $aComponents['s']->getSize(),
+            $aComponents['l']->getSize()
+          );
     }
+    return null;
   }
 }
