@@ -1140,14 +1140,16 @@ class Navegar extends Service
         try {
             $site = parse_url($url, PHP_URL_HOST);
             
+            if ($site === false) $site = $url;
+            
+            if (! empty(trim($site))) return false;
+            
             $db = new Connection();
             $r = $db->deepQuery("SELECT * FROM _navegar_visits WHERE site = '$site';");
             
             if (empty($r)) {
-                if (! empty(trim($site)))
-                    $sql = "INSERT INTO _navegar_visits (site) VALUES ('$site');";
-                else
-                    return false;
+                
+                $sql = "INSERT INTO _navegar_visits (site) VALUES ('$site');";
             } else {
                 $sql = "UPDATE _navegar_visits SET usage_count = usage_count + 1, last_usage = CURRENT_TIMESTAMP WHERE site = '$site';";
             }
