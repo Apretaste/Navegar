@@ -966,7 +966,7 @@ class Navegar extends Service
     private function getFullHref ($href, $url)
     {
         $href = trim($href);
-        if ($href == '' || $href == 'javascript(0);') return $url;
+        if ($href == '' || $href == 'javascript(0);' || $href == 'javascript:void(0);') return $url;
         if (strtolower(substr($href, 0, 2) == '//')) return 'http:' . $href;
         if (strtolower(substr($href, 0, 1) == '?')) {
             if (! is_null($this->base)) return $this->base . $href;
