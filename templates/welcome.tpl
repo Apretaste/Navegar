@@ -65,7 +65,6 @@ ser de tu inter&eacute;s:</p>
 	<li>{link href="NAVEGAR http://wordpress.com" caption ="wordpress.com - Blogs"}</li>
 	<li>{link href="NAVEGAR http://20minutos.es" caption ="20minutos.es - Blogs 20 Minutos"}</li>
 	<li>{link href="NAVEGAR http://cnn.com" caption ="cnn.com - CNN Noticias"}</li>
-	<li>{link href="NAVEGAR http://bbc.co.uk" caption ="bbc.co.uk - BBC Noticias"}</li>
 	<li>{link href="NAVEGAR http://feeds.bbci.co.uk/news/england/rss.xml" caption ="Canal BBC Noticias"}</li>
 	<li>{link href="NAVEGAR http://Espn.go.com" caption ="Espn.go.com - Noticias deportivas"}</li>
 	<li>{link href="NAVEGAR ftp://ftp.4d.com/" caption="ftp.4d.com - Ejemplo servidor FTP"}</li>	

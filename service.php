@@ -44,7 +44,7 @@ class Navegar extends Service
             
             $db = new Connection();
             
-            $sql = "SELECT * FROM _navegar_visits ORDER BY usage_count DESC LIMIT 10;";
+            $sql = "SELECT * FROM _navegar_visits WHERE site is not null and site <> '' ORDER BY usage_count DESC LIMIT 10;";
             
             $result = $db->deepQuery($sql);
             if (! isset($result[0])) $result = false;
@@ -301,6 +301,9 @@ class Navegar extends Service
         $url = str_replace("//", "/", $url);
         $url = str_replace("http:/", "http://", $url);
         $url = str_replace("https:/", "https://", $url);
+        
+        if (substr($url, 0, 2) == '//') $url = 'http:' . $url;
+        else if (substr($url, 0, 1) == '/') $url = 'http:/' . $url;
         
         // Create http client
         $http_client = new GuzzleHttp\Client(array(
@@ -965,7 +968,7 @@ class Navegar extends Service
     private function getFullHref ($href, $url)
     {
         $href = trim($href);
-        if ($href == '' || $href == 'javascript(0);') return $url;
+        if ($href == '' || $href == 'javascript(0);' || $href == 'javascript:void(0);') return $url;
         if (strtolower(substr($href, 0, 2) == '//')) return 'http:' . $href;
         if (strtolower(substr($href, 0, 1) == '?')) {
             if (! is_null($this->base)) return $this->base . $href;
@@ -1140,16 +1143,23 @@ class Navegar extends Service
         try {
             $site = parse_url($url, PHP_URL_HOST);
             
+            if ($site === false) $site = $url;
+            
+            if (! empty(trim($site))) return false;
+            
             $db = new Connection();
             $r = $db->deepQuery("SELECT * FROM _navegar_visits WHERE site = '$site';");
             
             if (empty($r)) {
+                
                 $sql = "INSERT INTO _navegar_visits (site) VALUES ('$site');";
             } else {
                 $sql = "UPDATE _navegar_visits SET usage_count = usage_count + 1, last_usage = CURRENT_TIMESTAMP WHERE site = '$site';";
             }
             
             $db->deepQuery($sql);
+            
+            return true;
         } catch (Exception $e) {}
     }
 
@@ -1473,7 +1483,7 @@ class Navegar extends Service
                 '-webkit-text-size-adjust',
                 'mso-hide',
                 'position',
-                 'white-space',
+                'white-space',
                 'list-style-type',
                 'font-style'
         );
@@ -1592,6 +1602,9 @@ class Navegar extends Service
                 case 'float':
                     if ($value == 'right') $ignore_rule = true;
                     break;
+                case 'white-space':
+                    if ($value == 'nowrap') $ignore_rule = true;
+                    break;
             }
             
             if (! $ignore_rule) {
@@ -1627,9 +1640,9 @@ class Navegar extends Service
     }
 
     /**
-     * Better contrast 
-     * 
-     * @param string $hexcolor
+     * Better contrast
+     *
+     * @param string $hexcolor            
      * @return string
      */
     private function getContrastYIQ ($hexcolor)
