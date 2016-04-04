@@ -301,6 +301,7 @@ class Navegar extends Service
         $url = str_replace("//", "/", $url);
         $url = str_replace("http:/", "http://", $url);
         $url = str_replace("https:/", "https://", $url);
+        if (substr($url, 0, 2) == '//') $url = 'http:' . $url;
         
         // Create http client
         $http_client = new GuzzleHttp\Client(array(
