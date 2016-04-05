@@ -9,6 +9,8 @@
  * @version 1.0
  */
 use Goutte\Client;
+use ForceUTF8\Encoding;
+use ForceUTF8;
 
 class Navegar extends Service
 {
@@ -219,6 +221,7 @@ class Navegar extends Service
         // ($mod_sockets ? 'sockets' : 'pure') . '.php';
         require_once $this->pathToService . '/lib/PemFTP/ftp_class_pure.php';
         require_once $this->pathToService . "/lib/CSSParser/CSSParser.php";
+        require_once $this->pathToService . "/lib/Encoding.php";
     }
 
     /**
@@ -483,6 +486,9 @@ class Navegar extends Service
         $css = '';
         $body = $http_response->getBody();
         
+        // Force to UTF8 encoding
+        $body = ForceUTF8\Encoding::toUTF8($body);
+        
         $tidy = new tidy();
         $body = $tidy->repairString($body, array(
                 'output-xhtml' => true
@@ -630,6 +636,9 @@ class Navegar extends Service
         $body = $doc->saveHTML();
         
         // Set style to each element in DOM, based on CSS stylesheets
+        
+        $css = ForceUTF8\Encoding::toUTF8($css);
+        
         $emo = new Pelago\Emogrifier($body, $css);
         $emo->disableInvisibleNodeRemoval();
         
@@ -1415,9 +1424,9 @@ class Navegar extends Service
                         )
                 );
                 if (isset($rss->entry->link)) $result['items'][0]['link'] = $rss->entry->link[0]->attributes('href') . "";
-                if (isset($rss->entry->title)) $result['items'][0]['title'] = $rss->entry->title . '';
+                if (isset($rss->entry->title)) $result['items'][0]['title'] = ForceUTF8\Encoding::toUTF8($rss->entry->title) . '';
                 if (isset($rss->entry->updated)) $result['items'][0]['pubDate'] = $rss->entry->updated . '';
-                if (isset($rss->entry->summary)) $result['items'][0]['description'] = $rss->entry->summary . '';
+                if (isset($rss->entry->summary)) $result['items'][0]['description'] = ForceUTF8\Encoding::toUTF8($rss->entry->summary) . '';
             }
             
             return $result;
@@ -1429,7 +1438,7 @@ class Navegar extends Service
                         'items' => array()
                 );
                 
-                if (isset($rss->channel->title)) $result['title'] = $rss->channel->title . '';
+                if (isset($rss->channel->title)) $result['title'] = ForceUTF8\Encoding::toUTF8($rss->channel->title) . '';
                 
                 if (isset($rss->channel->item)) foreach ($rss->channel->item as $item) {
                     
@@ -1441,9 +1450,9 @@ class Navegar extends Service
                     );
                     
                     if (isset($item->link)) $data['link'] = $item->link;
-                    if (isset($item->title)) $data['title'] = $item->title;
+                    if (isset($item->title)) $data['title'] = ForceUTF8\Encoding::toUTF8($item->title);
                     if (isset($item->pubDate)) $data['pubDate'] = $item->pubDate;
-                    if (isset($item->description)) $data['description'] = $item->description;
+                    if (isset($item->description)) $data['description'] = ForceUTF8\Encoding::toUTF8($item->description);
                     
                     $result['items'][] = $data;
                 }
