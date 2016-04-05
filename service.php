@@ -10,7 +10,6 @@
  */
 use Goutte\Client;
 use ForceUTF8\Encoding;
-use ForceUTF8;
 
 class Navegar extends Service
 {
