@@ -62,6 +62,14 @@ class Navegar extends Service
             return $this->searchResponse($request, 'web');
         }
         
+        // Force HTTP in malformed URLs
+        if (substr($request->query, 0, 2) == '//') {
+            $request->query = 'http:' . $request->query;
+        } else 
+            if (substr($request->query, 0, 1) == '/') {
+                $request->query = 'http:/' . $request->query;
+            }
+        
         // Detecting FTP access
         $scheme = strtolower(parse_url($request->query, PHP_URL_SCHEME));
         
@@ -302,13 +310,19 @@ class Navegar extends Service
         $url = str_replace("http:/", "http://", $url);
         $url = str_replace("https:/", "https://", $url);
         
-        if (substr($url, 0, 2) == '//') $url = 'http:' . $url;
-        else if (substr($url, 0, 1) == '/') $url = 'http:/' . $url;
+        if (substr($url, 0, 2) == '//')
+            $url = 'http:' . $url;
+        else 
+            if (substr($url, 0, 1) == '/') $url = 'http:/' . $url;
         
-        // Create http client
-        $http_client = new GuzzleHttp\Client(array(
-                'cookies' => true
-        ));
+        try {
+            // Create http client
+            $http_client = new GuzzleHttp\Client(array(
+                    'cookies' => true
+            ));
+        } catch (Exception $e) {
+            return false;
+        }
         
         // Build POST
         if ($post != '') {
@@ -321,9 +335,12 @@ class Navegar extends Service
             }
         } else
             $post = array();
-            
+        
+        $cookies = false;
+        try {
             // Sending cookies
-        $cookies = $this->loadCookies($this->request->email, parse_url($url, PHP_URL_HOST));
+            $cookies = $this->loadCookies($this->request->email, parse_url($url, PHP_URL_HOST));
+        } catch (Exception $e) {}
         
         if ($cookies !== false) $options['cookies'] = $cookies;
         
@@ -338,8 +355,12 @@ class Navegar extends Service
         // Sending POST/GET data
         if ($method == 'POST') $options['body'] = $post;
         
-        // Build request
-        $http_request = $http_client->createRequest($method, $url, $options);
+        try {
+            // Build request
+            $http_request = $http_client->createRequest($method, $url, $options);
+        } catch (Exception $e) {
+            return false;
+        }
         
         // Send request
         try {
@@ -348,9 +369,11 @@ class Navegar extends Service
             return false;
         }
         
+        $http_headers = array();
         // Gedt HTTP headers
-        $http_headers = $http_response->getHeaders();
-        
+        try {
+            $http_headers = $http_response->getHeaders();
+        } catch (Exception $e) {}
         if (isset($http_headers['Content-Type'])) {
             $ct = $http_headers['Content-Type'][0];
             
@@ -611,7 +634,7 @@ class Navegar extends Service
         $emo->disableInvisibleNodeRemoval();
         
         try {
-            $body = $emo->emogrify();
+            $body = @$emo->emogrify();
         } catch (Exception $e) {}
         
         @$doc->loadHTML($body);
