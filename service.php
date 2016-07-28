@@ -325,6 +325,9 @@ class Navegar extends Service
             			'verify' => false
             		)
             ));
+            
+            $http_client->setDefaultOption('config/curl/' . CURLOPT_SSL_VERIFYPEER, false);
+            
         } catch (Exception $e) {
             return false;
         }
