@@ -320,7 +320,10 @@ class Navegar extends Service
         try {
             // Create http client
             $http_client = new GuzzleHttp\Client(array(
-                    'cookies' => true
+                    'cookies' => true,
+            		'defaults' => array(
+            			'verify' => false
+            		)
             ));
         } catch (Exception $e) {
             return false;
